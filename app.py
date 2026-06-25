@@ -45,6 +45,31 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+# ── Autenticação ───────────────────────────────────────────────────────────────
+
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+if not st.session_state['autenticado']:
+    st.title("Studio Personal Training")
+    st.markdown("### Acesso Restrito")
+    st.divider()
+
+    with st.form("login_form"):
+        usuario = st.text_input("Usuário")
+        senha   = st.text_input("Senha", type="password")
+        entrar  = st.form_submit_button("Entrar", use_container_width=True)
+
+    if entrar:
+        if usuario == "admin" and senha == "studio2026":
+            st.session_state['autenticado'] = True
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos.")
+
+    st.stop()
+
+
 # ── Cabeçalho ─────────────────────────────────────────────────────────────────
 
 st.title("Gerador de Treino Personalizado")
@@ -63,18 +88,22 @@ def _slug(nome):
 # ── Mapeamentos ───────────────────────────────────────────────────────────────
 
 DIVISOES_F = {
-    "AB Feminino 4x  —  A: Pernas/Glúteos  |  B: Braço/Ombro":                                     "AB_4x",
-    "ABC Feminino  —  A: Glúteos/Post.  |  B: Pernas/Quad  |  C: Upper Body":                      "ABC",
-    "ABCD Feminino  —  A: Glúteos  |  B: Pernas  |  C: Costas/Bíceps  |  D: Ombro/Tríceps":       "ABCD",
-    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                  "full_body_3x",
+    "AB Feminino 4x  —  A: Pernas/Glúteos  |  B: Braço/Ombro":                                       "AB_4x",
+    "ABC Feminino  —  A: Glúteos/Post.  |  B: Pernas/Quad  |  C: Upper Body":                        "ABC",
+    "ABCD Feminino  —  A: Glúteos  |  B: Pernas  |  C: Costas/Bíceps  |  D: Ombro/Tríceps":         "ABCD",
+    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                    "full_body_3x",
+    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                              "full_body_50_2x",
+    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                          "full_body_50_3x",
 }
 
 DIVISOES_M = {
-    "AB Masculino 4x  —  A: Peito/Tríceps/Ombro/Quad  |  B: Costas/Bíceps/Post.":                 "AB_4x",
-    "ABC Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas/Ombro":                "ABC",
-    "ABCD Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas  |  D: Ombro/Core":  "ABCD",
-    "Push Pull Legs  —  Push: Peito/Ombro/Tríceps  |  Pull: Costas/Bíceps  |  Legs: Pernas":      "push_pull_legs",
-    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                  "full_body_3x",
+    "AB Masculino 4x  —  A: Peito/Tríceps/Ombro/Quad  |  B: Costas/Bíceps/Post.":                   "AB_4x",
+    "ABC Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas/Ombro":                  "ABC",
+    "ABCD Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas  |  D: Ombro/Core":    "ABCD",
+    "Push Pull Legs  —  Push: Peito/Ombro/Tríceps  |  Pull: Costas/Bíceps  |  Legs: Pernas":        "push_pull_legs",
+    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                    "full_body_3x",
+    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                              "full_body_50_2x",
+    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                          "full_body_50_3x",
 }
 
 PERIODIZACOES = {
@@ -123,7 +152,7 @@ with st.expander("📋 Dados do Cliente", expanded=True):
 
     col_data, col_periodo = st.columns(2)
     with col_data:
-        data_inicio = st.date_input("Data de início", value=date.today())
+        data_inicio = st.date_input("Data de início", value=date.today(), format="DD/MM/YYYY")
     with col_periodo:
         periodo = st.selectbox("Período do plano (semanas)", [4, 6, 8, 10, 12, 16], index=2)
 

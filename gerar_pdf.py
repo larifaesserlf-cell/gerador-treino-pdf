@@ -160,6 +160,7 @@ def _bloco_perfil(dados, est):
     divisao_map = {
         "AB_4x": "A/B (4x/sem)", "ABC": "A/B/C", "ABCD": "A/B/C/D",
         "push_pull_legs": "Push/Pull/Legs", "full_body_3x": "Full Body (3x/sem)",
+        "full_body_50_2x": "Full Body 50+ (2x/sem)", "full_body_50_3x": "Full Body 50+ (3x/sem)",
     }
     objetivo_map = {
         "hipertrofia": "Hipertrofia Muscular",
@@ -361,11 +362,13 @@ def gerar_pdf(dados, treinos, descricoes_treino, cardio,
     story = []
 
     divisao_nomes = {
-        "AB_4x":          "A/B  (4x por semana)",
-        "ABC":            "A/B/C",
-        "ABCD":           "A/B/C/D",
-        "push_pull_legs": "Push / Pull / Legs",
-        "full_body_3x":   "Full Body  (3x por semana)",
+        "AB_4x":           "A/B  (4x por semana)",
+        "ABC":             "A/B/C",
+        "ABCD":            "A/B/C/D",
+        "push_pull_legs":  "Push / Pull / Legs",
+        "full_body_3x":    "Full Body  (3x por semana)",
+        "full_body_50_2x": "Full Body 50+  (2x por semana)",
+        "full_body_50_3x": "Full Body 50+  (3x por semana)",
     }
 
     story.append(_bloco_cabecalho(dados, est))
