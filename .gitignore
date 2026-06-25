@@ -1,0 +1,27 @@
+# Credenciais — nunca versionar
+config.py
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Dados de clientes (opcional — remova esta linha se quiser versionar as fichas)
+dados_clientes/*.json
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+
+# IDEs
+.vscode/
+.idea/
+
+# Sistema
+.DS_Store
+Thumbs.db
