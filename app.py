@@ -17,6 +17,14 @@ from exercicios import (
 from gerar_pdf import gerar_pdf
 from gerar_pdf_anamnese import gerar_pdf_anamnese
 from gerar_pdf_postural import gerar_pdf_postural
+from gerar_pdf_progresso import gerar_pdf_progresso
+import random
+
+try:
+    import plotly.graph_objects as go
+    _HAS_PLOTLY = True
+except ImportError:
+    _HAS_PLOTLY = False
 
 
 # ── Configuração da página ─────────────────────────────────────────────────────
@@ -209,6 +217,92 @@ def _idx_default(options, value):
         return 0
 
 
+# ── Helpers: gestão de clientes ───────────────────────────────────────────────
+
+def _cadastro_path(slug):  return f"dados_clientes/cadastro_{slug}.json"
+def _medidas_path(slug):   return f"dados_clientes/medidas_{slug}.json"
+def _peso_path(slug):      return f"dados_clientes/peso_{slug}.json"
+
+
+def _carregar_json(path, default):
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return default
+
+
+def _salvar_json(path, data):
+    os.makedirs("dados_clientes", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _todos_cadastros():
+    os.makedirs("dados_clientes", exist_ok=True)
+    result = []
+    for arq in sorted(glob.glob("dados_clientes/cadastro_*.json")):
+        d = _carregar_json(arq, None)
+        if d:
+            result.append(d)
+    return result
+
+
+def _chart_peso(registros, meta=None, height=300):
+    if not _HAS_PLOTLY or not registros:
+        return None
+    datas = [r.get("data", "") for r in registros]
+    pesos = [float(r["peso"]) if r.get("peso") else None for r in registros]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=datas, y=pesos, mode="lines+markers", name="Peso (kg)",
+        line=dict(color="#333333", width=2), marker=dict(size=6),
+    ))
+    if meta:
+        fig.add_hline(
+            y=float(meta), line_dash="dash", line_color="#888888",
+            annotation_text=f"Meta: {meta} kg", annotation_position="top right",
+        )
+    fig.update_layout(
+        xaxis_title="Data", yaxis_title="Peso (kg)",
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(l=40, r=20, t=20, b=60), height=height,
+    )
+    fig.update_xaxes(tickangle=-30)
+    return fig
+
+
+def _chart_medidas(registros, height=350):
+    if not _HAS_PLOTLY or not registros:
+        return None
+    CAMPOS = [
+        ("circ_abd", "Circ. Abd. (cm)"),
+        ("cintura",  "Cintura (cm)"),
+        ("quadril",  "Quadril (cm)"),
+        ("coxa_d",   "Coxa D. (cm)"),
+        ("braco_d",  "Braço D. (cm)"),
+    ]
+    CORES = ["#222222", "#555555", "#888888", "#aaaaaa", "#cccccc"]
+    datas = [r.get("data", "") for r in registros]
+    fig = go.Figure()
+    for (key, label), cor in zip(CAMPOS, CORES):
+        vals = [float(r[key]) if r.get(key) else None for r in registros]
+        if any(v for v in vals):
+            fig.add_trace(go.Scatter(
+                x=datas, y=vals, mode="lines+markers", name=label,
+                line=dict(color=cor, width=1.5), marker=dict(size=5),
+            ))
+    fig.update_layout(
+        xaxis_title="Data", yaxis_title="cm",
+        plot_bgcolor="white", paper_bgcolor="white",
+        margin=dict(l=40, r=20, t=20, b=60), height=height,
+    )
+    fig.update_xaxes(tickangle=-30)
+    return fig
+
+
 # ── Constantes ────────────────────────────────────────────────────────────────
 
 PARQ_PERGUNTAS = [
@@ -391,7 +485,7 @@ def _pagina_home():
 
     st.divider()
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("""
@@ -427,14 +521,34 @@ def _pagina_home():
             st.session_state['area'] = 'postural'
             st.rerun()
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    col3, col4 = st.columns(2)
+
     with col3:
+        st.markdown("""
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
+                    text-align:center; background:#f8f9fa; min-height:195px;">
+            <div style="font-size:2.8rem; margin-bottom:0.4rem;">👤</div>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Portal do Cliente</h3>
+            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
+                Registre seu peso, acompanhe sua evolução e visualize seu progresso.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Acessar Portal", key="btn_home_portal",
+                     use_container_width=True, type="primary"):
+            st.session_state['area'] = 'portal_cliente'
+            st.rerun()
+
+    with col4:
         st.markdown("""
         <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
                     text-align:center; background:#f8f9fa; min-height:195px;">
             <div style="font-size:2.8rem; margin-bottom:0.4rem;">👩‍💼</div>
             <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Acesso Professora</h3>
             <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
-                Gerencie fichas de anamnese e gere planos de treino personalizados.
+                Gerencie clientes, anamneses e gere planos de treino personalizados.
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -852,6 +966,222 @@ def _pagina_upload_postural():
                                 pasta, len(fotos_salvas))
             st.session_state['postural_confirmada'] = True
             st.rerun()
+
+
+# ── Página: Portal do Cliente ────────────────────────────────────────────────
+
+def _form_cadastro_cliente():
+    st.markdown("### Criar Cadastro")
+    nome_hint = st.session_state.get('portal_nome_hint', '')
+
+    nome_c = st.text_input("Nome completo *", value=nome_hint, key="cad_nome")
+    col_nasc, col_wpp = st.columns(2)
+    with col_nasc:
+        nasc_c = st.date_input("Data de nascimento", value=None,
+                                format="DD/MM/YYYY", key="cad_nasc")
+    with col_wpp:
+        wpp_c = st.text_input("WhatsApp", key="cad_wpp")
+    email_c = st.text_input("E-mail", key="cad_email")
+    foto_c  = st.file_uploader("Foto de perfil (opcional)",
+                                type=["jpg", "jpeg", "png"], key="cad_foto")
+
+    col_ok, col_bk = st.columns(2)
+    with col_ok:
+        if st.button("Criar cadastro", type="primary",
+                     use_container_width=True, key="btn_criar_cad"):
+            if not nome_c.strip():
+                st.error("Informe o nome completo.")
+                return
+            slug_c = _slug(nome_c.strip())
+            os.makedirs("dados_clientes", exist_ok=True)
+            foto_fn = None
+            if foto_c:
+                ext = foto_c.name.rsplit(".", 1)[-1].lower()
+                foto_fn = f"foto_perfil_{slug_c}.{ext}"
+                with open(os.path.join("dados_clientes", foto_fn), "wb") as fout:
+                    fout.write(foto_c.getbuffer())
+            cad = {
+                "nome":           nome_c.strip(),
+                "slug":           slug_c,
+                "data_nascimento": nasc_c.strftime("%d/%m/%Y") if nasc_c else "",
+                "email":          email_c.strip(),
+                "whatsapp":       wpp_c.strip(),
+                "foto_perfil":    foto_fn,
+                "data_cadastro":  date.today().strftime("%d/%m/%Y"),
+                "timestamp":      datetime.now().isoformat(),
+            }
+            _salvar_json(_cadastro_path(slug_c), cad)
+            st.session_state['cliente_slug'] = slug_c
+            st.session_state.pop('portal_modo', None)
+            st.session_state.pop('portal_nome_hint', None)
+            st.success("✅ Cadastro criado com sucesso!")
+            st.rerun()
+    with col_bk:
+        if st.button("← Voltar", use_container_width=True, key="btn_cad_voltar"):
+            st.session_state.pop('portal_modo', None)
+            st.rerun()
+
+
+def _pagina_portal_cliente():
+    if st.button("← Início", key="btn_voltar_portal"):
+        st.session_state['area'] = None
+        st.session_state.pop('cliente_slug', None)
+        st.session_state.pop('portal_modo', None)
+        st.session_state.pop('portal_nome_hint', None)
+        st.rerun()
+
+    # ── Identificação ─────────────────────────────────────────────────────────
+    if not st.session_state.get('cliente_slug'):
+        st.title("Portal do Cliente")
+        st.markdown('<p class="subtitulo">Studio Personal Training</p>',
+                    unsafe_allow_html=True)
+        st.divider()
+
+        if st.session_state.get('portal_modo') == 'cadastro':
+            _form_cadastro_cliente()
+            return
+
+        st.markdown("### Identificação")
+        nome_id = st.text_input("Seu nome completo", key="portal_id_nome",
+                                 placeholder="Digite exatamente como foi cadastrado")
+        col_a, col_b = st.columns(2)
+        with col_a:
+            if st.button("Acessar meu perfil", type="primary",
+                         use_container_width=True, key="btn_portal_acessar"):
+                slug_id = _slug(nome_id.strip()) if nome_id.strip() else ""
+                if not slug_id:
+                    st.error("Digite seu nome.")
+                elif os.path.exists(_cadastro_path(slug_id)):
+                    st.session_state['cliente_slug'] = slug_id
+                    st.rerun()
+                else:
+                    todos = _todos_cadastros()
+                    matches = [
+                        c for c in todos
+                        if nome_id.strip().lower() in c.get("nome", "").lower()
+                        or c.get("nome", "").lower() in nome_id.strip().lower()
+                    ]
+                    if matches:
+                        st.session_state['cliente_slug'] = matches[0]['slug']
+                        st.rerun()
+                    else:
+                        st.warning("Cadastro não encontrado. Você pode se cadastrar abaixo.")
+        with col_b:
+            if st.button("Fazer cadastro", use_container_width=True,
+                         key="btn_portal_cadastrar"):
+                st.session_state['portal_modo'] = 'cadastro'
+                st.session_state['portal_nome_hint'] = nome_id
+                st.rerun()
+        return
+
+    # ── Portal autenticado ────────────────────────────────────────────────────
+    slug   = st.session_state['cliente_slug']
+    cad_c  = _carregar_json(_cadastro_path(slug), {})
+    nome_c = cad_c.get("nome", slug)
+    meta_p = cad_c.get("meta_peso")
+
+    st.title(f"Olá, {nome_c.split()[0]}!")
+    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+
+    col_sair, _ = st.columns([1, 5])
+    with col_sair:
+        if st.button("Sair", key="btn_portal_sair"):
+            st.session_state.pop('cliente_slug', None)
+            st.rerun()
+
+    st.divider()
+
+    pesos = _carregar_json(_peso_path(slug), [])
+
+    tab_peso, tab_prog = st.tabs(["⚖️  Registrar Peso", "📊  Meu Progresso"])
+
+    with tab_peso:
+        st.markdown("#### Lançamento de Peso")
+        col_p, col_d = st.columns(2)
+        with col_p:
+            val_inicial = float(pesos[-1]["peso"]) if pesos else 60.0
+            novo_peso = st.number_input(
+                "Peso atual (kg)", min_value=20.0, max_value=300.0,
+                value=val_inicial, step=0.1, format="%.1f", key="portal_peso",
+            )
+        with col_d:
+            data_peso = st.date_input("Data", value=date.today(),
+                                      format="DD/MM/YYYY", key="portal_data_peso")
+
+        if st.button("Registrar peso", type="primary",
+                     use_container_width=True, key="btn_registrar_peso"):
+            entry = {
+                "data":      data_peso.strftime("%d/%m/%Y"),
+                "peso":      round(float(novo_peso), 1),
+                "timestamp": datetime.now().isoformat(),
+            }
+            pesos.append(entry)
+            _salvar_json(_peso_path(slug), pesos)
+            frases = [
+                "💪 Cada registro é um passo rumo ao seu objetivo!",
+                "🌟 Constância é o segredo do sucesso. Continue assim!",
+                "🏆 Você está no caminho certo. Não desista!",
+                "🎯 Meta em vista! Continue focada.",
+                "✨ Pequenos passos levam a grandes conquistas!",
+            ]
+            st.success("✅ Peso registrado!")
+            st.info(random.choice(frases))
+            st.rerun()
+
+        if pesos:
+            if meta_p:
+                st.markdown(f"**Meta definida pela professora:** {meta_p} kg")
+            fig = _chart_peso(pesos, meta=meta_p)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                for p in reversed(pesos[-10:]):
+                    st.markdown(f"- {p['data']}: **{p['peso']} kg**")
+
+    with tab_prog:
+        st.markdown("#### Meu Progresso")
+        medidas_c = _carregar_json(_medidas_path(slug), [])
+
+        todos_pesos = []
+        for m in medidas_c:
+            if m.get("peso"):
+                todos_pesos.append({"data": m["data"], "peso": m["peso"]})
+        todos_pesos.extend(pesos)
+        try:
+            todos_pesos.sort(
+                key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y"))
+        except Exception:
+            pass
+
+        if not todos_pesos:
+            st.info("Nenhum dado ainda. Registre seu peso na aba ao lado!")
+        else:
+            p_ini = float(todos_pesos[0]["peso"])
+            p_atu = float(todos_pesos[-1]["peso"])
+            diff  = p_atu - p_ini
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Peso Inicial", f"{p_ini:.1f} kg")
+            with c2:
+                st.metric("Peso Atual", f"{p_atu:.1f} kg",
+                          delta=f"{'+' if diff>0 else ''}{diff:.1f} kg")
+            with c3:
+                if meta_p:
+                    faltam = p_atu - float(meta_p)
+                    st.metric("Meta", f"{float(meta_p):.1f} kg",
+                              delta=f"{'+' if faltam>0 else ''}{faltam:.1f} kg")
+                else:
+                    st.metric("Meta", "—")
+
+            fig_p = _chart_peso(todos_pesos, meta=meta_p)
+            if fig_p:
+                st.plotly_chart(fig_p, use_container_width=True)
+
+        if len(medidas_c) >= 2:
+            st.markdown("**Evolução das Medidas**")
+            fig_m = _chart_medidas(medidas_c)
+            if fig_m:
+                st.plotly_chart(fig_m, use_container_width=True)
 
 
 # ── Tab: Gerador de Treino ────────────────────────────────────────────────────
@@ -1381,6 +1711,342 @@ def _tab_avaliacao_postural():
                 st.error(f"Erro ao gerar PDF: {e}")
 
 
+# ── Tab: Clientes (professora) ────────────────────────────────────────────────
+
+def _perfil_cliente_prof(slug):
+    cad      = _carregar_json(_cadastro_path(slug), {})
+    nome_c   = cad.get("nome", slug)
+    medidas  = _carregar_json(_medidas_path(slug), [])
+    pesos_c  = _carregar_json(_peso_path(slug), [])
+
+    col_bk, col_ti = st.columns([1, 5])
+    with col_bk:
+        if st.button("← Lista", key="btn_volta_lista"):
+            st.session_state.pop('clientes_perfil_slug', None)
+            st.rerun()
+    with col_ti:
+        st.markdown(f"#### {nome_c}")
+
+    tab_dados, tab_med, tab_prog = st.tabs([
+        "👤  Dados Pessoais",
+        "📏  Medidas e Evolução",
+        "📈  Progresso",
+    ])
+
+    # ── Aba: Dados Pessoais ───────────────────────────────────────────────────
+    with tab_dados:
+        col_foto, col_info = st.columns([1, 3])
+        with col_foto:
+            fn = cad.get("foto_perfil")
+            if fn:
+                fp = os.path.join("dados_clientes", fn)
+                if os.path.exists(fp):
+                    st.image(fp, width=120)
+                else:
+                    st.markdown("👤")
+            else:
+                st.markdown("👤")
+        with col_info:
+            st.markdown(f"**Nome:** {cad.get('nome','')}")
+            st.markdown(f"**Nascimento:** {cad.get('data_nascimento','—')}")
+            st.markdown(f"**WhatsApp:** {cad.get('whatsapp','—')}")
+            st.markdown(f"**E-mail:** {cad.get('email','—')}")
+            st.markdown(f"**Cadastrado em:** {cad.get('data_cadastro','—')}")
+
+        st.divider()
+        st.markdown("**Registros vinculados**")
+        slug_c = cad.get("slug", slug)
+
+        anam = sorted(glob.glob(f"dados_clientes/anamnese_{slug_c}_*.json"), reverse=True)
+        if anam:
+            st.markdown(f"📋 Anamnese: `{os.path.basename(anam[0])}`")
+        else:
+            st.markdown("📋 Anamnese: _nenhuma_")
+
+        fotos_dir = sorted(
+            [p for p in glob.glob(f"dados_clientes/fotos_{slug_c}_*") if os.path.isdir(p)],
+            reverse=True,
+        )
+        if fotos_dir:
+            st.markdown(f"📸 Avaliação Postural: `{os.path.basename(fotos_dir[0])}`")
+        else:
+            st.markdown("📸 Avaliação Postural: _nenhuma_")
+
+        treinos = sorted(glob.glob(f"{slug_c}_*.pdf"), reverse=True)
+        if treinos:
+            st.markdown(f"🏋️ Último treino: `{os.path.basename(treinos[0])}`")
+        else:
+            st.markdown("🏋️ Treino gerado: _nenhum_")
+
+        st.divider()
+        with st.expander("✏️ Editar dados"):
+            with st.form(key=f"edit_cad_{slug}"):
+                e_nome = st.text_input("Nome", value=cad.get("nome",""), key=f"e_nome_{slug}")
+                e_nasc = st.text_input("Data de nascimento (DD/MM/AAAA)",
+                                       value=cad.get("data_nascimento",""), key=f"e_nasc_{slug}")
+                e_wpp  = st.text_input("WhatsApp", value=cad.get("whatsapp",""), key=f"e_wpp_{slug}")
+                e_mail = st.text_input("E-mail", value=cad.get("email",""), key=f"e_mail_{slug}")
+                if st.form_submit_button("Salvar alterações", type="primary"):
+                    cad.update({"nome": e_nome.strip(), "data_nascimento": e_nasc.strip(),
+                                "whatsapp": e_wpp.strip(), "email": e_mail.strip()})
+                    _salvar_json(_cadastro_path(slug), cad)
+                    st.success("✅ Dados atualizados!")
+                    st.rerun()
+
+    # ── Aba: Medidas e Evolução ───────────────────────────────────────────────
+    with tab_med:
+        # Meta de peso
+        meta_atual = cad.get("meta_peso")
+        st.markdown("#### Meta de Peso")
+        col_m, col_ms = st.columns([3, 1])
+        with col_m:
+            nova_meta = st.number_input(
+                "Meta de peso (kg) — 0 = sem meta", min_value=0.0, max_value=300.0,
+                value=float(meta_atual) if meta_atual else 0.0,
+                step=0.5, format="%.1f", key=f"meta_{slug}",
+            )
+        with col_ms:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("Salvar meta", key=f"btn_meta_{slug}", use_container_width=True):
+                cad["meta_peso"] = float(nova_meta) if nova_meta > 0 else None
+                _salvar_json(_cadastro_path(slug), cad)
+                st.success("Meta atualizada!")
+                st.rerun()
+
+        st.divider()
+        st.markdown("#### Lançar Medidas")
+        with st.form(key=f"form_med_{slug}"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                data_med = st.date_input("Data", value=date.today(),
+                                          format="DD/MM/YYYY", key=f"md_dt_{slug}")
+                peso_med = st.number_input("Peso (kg) — 0 = não inf.",
+                                            min_value=0.0, max_value=300.0,
+                                            value=0.0, step=0.1, format="%.1f",
+                                            key=f"md_p_{slug}")
+                circ_abd = st.number_input("Circ. Abdominal (cm)",
+                                            min_value=0.0, value=0.0,
+                                            step=0.1, format="%.1f", key=f"md_ca_{slug}")
+            with c2:
+                cintura = st.number_input("Cintura (cm)", min_value=0.0, value=0.0,
+                                           step=0.1, format="%.1f", key=f"md_ci_{slug}")
+                quadril = st.number_input("Quadril (cm)", min_value=0.0, value=0.0,
+                                           step=0.1, format="%.1f", key=f"md_q_{slug}")
+                coxa_d  = st.number_input("Coxa Direita (cm)", min_value=0.0, value=0.0,
+                                           step=0.1, format="%.1f", key=f"md_co_{slug}")
+            with c3:
+                braco_d  = st.number_input("Braço Direito (cm)", min_value=0.0, value=0.0,
+                                            step=0.1, format="%.1f", key=f"md_br_{slug}")
+                perc_g   = st.number_input("% Gordura", min_value=0.0, max_value=100.0,
+                                            value=0.0, step=0.1, format="%.1f",
+                                            key=f"md_pg_{slug}")
+                obs_med  = st.text_area("Observações", height=70, key=f"md_ob_{slug}")
+            submitted = st.form_submit_button(
+                "Registrar medidas", type="primary", use_container_width=True)
+
+        if submitted:
+            entry = {
+                "data":      data_med.strftime("%d/%m/%Y"),
+                "peso":      float(peso_med) if peso_med > 0 else None,
+                "circ_abd":  float(circ_abd) if circ_abd > 0 else None,
+                "cintura":   float(cintura)  if cintura  > 0 else None,
+                "quadril":   float(quadril)  if quadril  > 0 else None,
+                "coxa_d":    float(coxa_d)   if coxa_d   > 0 else None,
+                "braco_d":   float(braco_d)  if braco_d  > 0 else None,
+                "perc_gord": float(perc_g)   if perc_g   > 0 else None,
+                "obs":       obs_med.strip(),
+                "timestamp": datetime.now().isoformat(),
+            }
+            medidas.append(entry)
+            _salvar_json(_medidas_path(slug), medidas)
+            st.success("✅ Medidas registradas!")
+            st.rerun()
+
+        if medidas:
+            st.divider()
+            st.markdown("#### Histórico de Medidas")
+            CAMPOS_TAB = [
+                ("data","Data"), ("peso","Peso"), ("circ_abd","Circ.Abd"),
+                ("cintura","Cintura"), ("quadril","Quadril"),
+                ("coxa_d","Coxa D."), ("braco_d","Braço D."), ("perc_gord","% Gord."),
+            ]
+            rows_tab = []
+            for m in reversed(medidas):
+                row = {}
+                for k, l in CAMPOS_TAB:
+                    v = m.get(k)
+                    row[l] = f"{float(v):.1f}" if v not in (None, "") else "—"
+                    if k == "data":
+                        row[l] = str(v) if v else "—"
+                rows_tab.append(row)
+            st.dataframe(rows_tab, use_container_width=True)
+
+            st.markdown("#### Gráficos")
+            med_peso = [m for m in medidas if m.get("peso")]
+            if med_peso:
+                fig_p = _chart_peso(med_peso,
+                                    meta=float(nova_meta) if nova_meta > 0 else None)
+                if fig_p:
+                    st.plotly_chart(fig_p, use_container_width=True)
+            if len(medidas) >= 2:
+                fig_m = _chart_medidas(medidas)
+                if fig_m:
+                    st.plotly_chart(fig_m, use_container_width=True)
+
+    # ── Aba: Progresso ────────────────────────────────────────────────────────
+    with tab_prog:
+        todos_pesos = []
+        for m in medidas:
+            if m.get("peso"):
+                todos_pesos.append({"data": m["data"], "peso": m["peso"]})
+        todos_pesos.extend(pesos_c)
+        try:
+            todos_pesos.sort(
+                key=lambda x: datetime.strptime(x["data"], "%d/%m/%Y"))
+        except Exception:
+            pass
+
+        meta_p = cad.get("meta_peso")
+
+        if not todos_pesos:
+            st.info("Nenhum dado de evolução registrado ainda.")
+        else:
+            p_ini = float(todos_pesos[0]["peso"])
+            p_atu = float(todos_pesos[-1]["peso"])
+            diff  = p_atu - p_ini
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.metric("Peso Inicial", f"{p_ini:.1f} kg")
+            with c2:
+                st.metric("Peso Atual", f"{p_atu:.1f} kg",
+                          delta=f"{'+' if diff>0 else ''}{diff:.1f} kg")
+            with c3:
+                if meta_p:
+                    faltam = p_atu - float(meta_p)
+                    st.metric("Meta", f"{float(meta_p):.1f} kg",
+                              delta=f"{'+' if faltam>0 else ''}{faltam:.1f} kg")
+                else:
+                    st.metric("Meta", "Não definida")
+
+        if len(medidas) >= 2:
+            st.markdown("#### Comparativo: Primeira vs Última Avaliação")
+            primeira = medidas[0]
+            ultima   = medidas[-1]
+            CAMPOS_COMP = [
+                ("peso","Peso (kg)"), ("circ_abd","Circ. Abd. (cm)"),
+                ("cintura","Cintura (cm)"), ("quadril","Quadril (cm)"),
+                ("coxa_d","Coxa D. (cm)"), ("braco_d","Braço D. (cm)"),
+                ("perc_gord","% Gordura"),
+            ]
+            rows_comp = []
+            for key, label in CAMPOS_COMP:
+                vi = primeira.get(key)
+                va = ultima.get(key)
+                if vi or va:
+                    vi_s = f"{float(vi):.1f}" if vi else "—"
+                    va_s = f"{float(va):.1f}" if va else "—"
+                    diff_s = "—"
+                    if vi and va:
+                        d = float(va) - float(vi)
+                        diff_s = f"{'+' if d>0 else ''}{d:.1f}"
+                    rows_comp.append({
+                        "Medida":  label,
+                        f"Inicial ({primeira.get('data','')})": vi_s,
+                        f"Atual ({ultima.get('data','')})":     va_s,
+                        "Variação": diff_s,
+                    })
+            if rows_comp:
+                st.dataframe(rows_comp, use_container_width=True)
+
+        if todos_pesos:
+            fig_p = _chart_peso(todos_pesos, meta=meta_p)
+            if fig_p:
+                st.plotly_chart(fig_p, use_container_width=True)
+
+        if len(medidas) >= 2:
+            fig_m = _chart_medidas(medidas)
+            if fig_m:
+                st.plotly_chart(fig_m, use_container_width=True)
+
+        st.divider()
+        if st.button("📄  Gerar PDF de Progresso", key=f"btn_pdf_prog_{slug}",
+                     use_container_width=True):
+            data_ini_str = (medidas[0]["data"] if medidas
+                            else (pesos_c[0]["data"] if pesos_c else "—"))
+            dados_pdf = {
+                "cliente":    nome_c,
+                "data_inicio": data_ini_str,
+                "data_fim":    datetime.now().strftime("%d/%m/%Y"),
+                "medidas":    medidas,
+                "todos_pesos": todos_pesos,
+                "meta_peso":  meta_p,
+                "obs_gerais": "",
+            }
+            try:
+                with st.spinner("Gerando PDF..."):
+                    pdf_b = gerar_pdf_progresso(dados_pdf)
+                st.download_button(
+                    "📥  Baixar PDF de Progresso",
+                    data=pdf_b,
+                    file_name=f"progresso_{slug}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"dl_pdf_prog_{slug}",
+                )
+            except Exception as e:
+                st.error(f"Erro ao gerar PDF: {e}")
+
+
+def _tab_clientes():
+    st.markdown("### Gestão de Clientes")
+
+    if st.session_state.get('clientes_perfil_slug'):
+        _perfil_cliente_prof(st.session_state['clientes_perfil_slug'])
+        return
+
+    todos = _todos_cadastros()
+    if not todos:
+        st.info("Nenhum cliente cadastrado ainda. Os clientes aparecem aqui após se cadastrarem no Portal do Cliente.")
+        return
+
+    for cad in todos:
+        slug_c = cad.get("slug", _slug(cad.get("nome", "")))
+        col_foto, col_info, col_btn = st.columns([1, 5, 2])
+
+        with col_foto:
+            fn = cad.get("foto_perfil")
+            if fn:
+                fp = os.path.join("dados_clientes", fn)
+                if os.path.exists(fp):
+                    st.image(fp, width=60)
+                    fn = None
+            if fn is None and not cad.get("foto_perfil"):
+                st.markdown('<div style="font-size:2rem;text-align:center">👤</div>',
+                            unsafe_allow_html=True)
+
+        with col_info:
+            medidas_c = _carregar_json(_medidas_path(slug_c), [])
+            pesos_c   = _carregar_json(_peso_path(slug_c), [])
+            ultimo_peso = "—"
+            if medidas_c and medidas_c[-1].get("peso"):
+                ultimo_peso = f"{medidas_c[-1]['peso']} kg"
+            elif pesos_c:
+                ultimo_peso = f"{pesos_c[-1]['peso']} kg"
+            st.markdown(f"**{cad.get('nome', '')}**")
+            st.caption(
+                f"Cadastro: {cad.get('data_cadastro','—')}  |  "
+                f"Último peso: {ultimo_peso}"
+            )
+
+        with col_btn:
+            if st.button("Ver perfil", key=f"btn_perfil_{slug_c}",
+                         use_container_width=True):
+                st.session_state['clientes_perfil_slug'] = slug_c
+                st.rerun()
+
+        st.divider()
+
+
 # ── Página: Professora ────────────────────────────────────────────────────────
 
 def _pagina_professora():
@@ -1425,10 +2091,11 @@ def _pagina_professora():
 
     st.divider()
 
-    tab_treino, tab_anamneses, tab_postural = st.tabs([
+    tab_treino, tab_anamneses, tab_postural, tab_cli = st.tabs([
         "🏋️  Gerador de Treino",
         "📋  Anamneses Recebidas",
         "📸  Avaliação Postural",
+        "👥  Clientes",
     ])
 
     with tab_treino:
@@ -1439,6 +2106,9 @@ def _pagina_professora():
 
     with tab_postural:
         _tab_avaliacao_postural()
+
+    with tab_cli:
+        _tab_clientes()
 
 
 # ── Roteamento principal ──────────────────────────────────────────────────────
@@ -1455,5 +2125,7 @@ elif _area == 'cliente':
     _pagina_anamnese()
 elif _area == 'postural':
     _pagina_upload_postural()
+elif _area == 'portal_cliente':
+    _pagina_portal_cliente()
 else:
     _pagina_professora()
