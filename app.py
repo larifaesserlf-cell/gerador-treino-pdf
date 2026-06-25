@@ -1,8 +1,12 @@
-import io
+import glob
+import json
 import os
+import smtplib
 import tempfile
 import unicodedata
 from datetime import date, datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 import streamlit as st
 
@@ -11,70 +15,30 @@ from exercicios import (
     CARDIO, PROGRESSAO, PERIODIZACAO, OBSERVACOES,
 )
 from gerar_pdf import gerar_pdf
+from gerar_pdf_anamnese import gerar_pdf_anamnese
 
+
+# ── Configuração da página ─────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Gerador de Treino Personalizado",
+    page_title="Studio Personal Training",
     page_icon="🏋️",
     layout="centered",
 )
 
 st.markdown("""
 <style>
-    /* botão primário maior */
     div[data-testid="stButton"] > button[kind="primary"] {
-        height: 3.2em;
-        font-size: 1.05em;
-        font-weight: 700;
-        letter-spacing: 0.02em;
+        height: 3.2em; font-size: 1.05em; font-weight: 700; letter-spacing: 0.02em;
     }
-    /* botão de download em destaque */
     div[data-testid="stDownloadButton"] > button {
-        height: 3em;
-        font-size: 1em;
-        font-weight: 600;
+        height: 3em; font-size: 1em; font-weight: 600;
     }
-    /* subtítulo */
     .subtitulo {
-        color: #555555;
-        font-size: 1.05em;
-        margin-top: -0.6em;
-        margin-bottom: 0.2em;
+        color: #555555; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
     }
 </style>
 """, unsafe_allow_html=True)
-
-
-# ── Autenticação ───────────────────────────────────────────────────────────────
-
-if 'autenticado' not in st.session_state:
-    st.session_state['autenticado'] = False
-
-if not st.session_state['autenticado']:
-    st.title("Studio Personal Training")
-    st.markdown("### Acesso Restrito")
-    st.divider()
-
-    with st.form("login_form"):
-        usuario = st.text_input("Usuário")
-        senha   = st.text_input("Senha", type="password")
-        entrar  = st.form_submit_button("Entrar", use_container_width=True)
-
-    if entrar:
-        if usuario == "admin" and senha == "studio2026":
-            st.session_state['autenticado'] = True
-            st.rerun()
-        else:
-            st.error("Usuário ou senha incorretos.")
-
-    st.stop()
-
-
-# ── Cabeçalho ─────────────────────────────────────────────────────────────────
-
-st.title("Gerador de Treino Personalizado")
-st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
-st.divider()
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -85,25 +49,154 @@ def _slug(nome):
     return '_'.join(p for p in s.split('_') if p)
 
 
-# ── Mapeamentos ───────────────────────────────────────────────────────────────
+def _formatar_anamnese_texto(dados):
+    def bloco(titulo, pares):
+        linhas = ["", "=" * 60, titulo, "=" * 60]
+        for k, v in pares:
+            linhas.append(f"{k}: {v}")
+        return linhas
+
+    linhas = [
+        "FICHA DE ANAMNESE",
+        f"Recebida em: {dados.get('data_envio', '')}",
+    ]
+
+    dp = dados.get('dados_pessoais', {})
+    linhas += bloco("1. DADOS PESSOAIS", [
+        ("Nome",             dp.get('nome', '')),
+        ("Data nascimento",  dp.get('data_nascimento', '')),
+        ("Sexo",             dp.get('sexo', '')),
+        ("Telefone",         dp.get('telefone', '')),
+        ("E-mail",           dp.get('email', '')),
+        ("Ocupação",         dp.get('ocupacao', '')),
+        ("Cidade/Estado",    dp.get('cidade_estado', '')),
+    ])
+
+    obj = dados.get('objetivo', {})
+    linhas += bloco("2. OBJETIVO", [
+        ("Objetivos",        ", ".join(obj.get('objetivos', []))),
+        ("Descrição",        obj.get('descricao', '')),
+        ("Praticou antes?",  obj.get('praticou_antes', '')),
+        ("Atividade ant.",   obj.get('atividade_anterior', '') or "—"),
+        ("Por que parou?",   obj.get('motivo_parou', '') or "—"),
+    ])
+
+    parq = dados.get('parq', {})
+    linhas += ["", "=" * 60, "3. PAR-Q+", "=" * 60]
+    for q in parq.get('questoes', []):
+        linhas.append(f"[{q['resposta']}]  {q['pergunta']}")
+    if parq.get('alerta_medico'):
+        linhas.append("\n*** ALERTA: recomendada avaliação médica antes de iniciar. ***")
+
+    hs = dados.get('historico_saude', {})
+    coluna_str = hs.get('coluna', 'Não')
+    if hs.get('coluna_regiao'):
+        coluna_str += f" ({hs['coluna_regiao']})"
+    linhas += bloco("4. HISTÓRICO DE SAÚDE", [
+        ("Doenças",              hs.get('doencas', '') or "Nenhuma"),
+        ("Medicamentos",         hs.get('medicamentos', '') or "Nenhum"),
+        ("Cirurgias",            hs.get('cirurgia', '') or "Nenhuma"),
+        ("Hist. fam. cardíaco",  hs.get('historico_cardiaco', '')),
+        ("Diabetes",             hs.get('diabetes', '')),
+        ("Hipertensão",          hs.get('hipertensao', '')),
+        ("Coluna",               coluna_str),
+        ("Lesões",               hs.get('lesoes', '') or "Nenhuma"),
+        ("Gravidez",             hs.get('gravidez', '')),
+    ])
+
+    ev = dados.get('estilo_vida', {})
+    linhas += bloco("5. ESTILO DE VIDA", [
+        ("Sono",               f"{ev.get('horas_sono','')} / {ev.get('qualidade_sono','')}"),
+        ("Estresse",           ev.get('estresse', '')),
+        ("Álcool",             ev.get('alcool', '')),
+        ("Tabagismo",          ev.get('fuma', '')),
+        ("Ativ. trabalho",     ev.get('atividade_trabalho', '')),
+        ("Horas sentado/dia",  ev.get('horas_sentado', '')),
+    ])
+
+    disp = dados.get('disponibilidade', {})
+    linhas += bloco("6. DISPONIBILIDADE", [
+        ("Dias/semana",   str(disp.get('dias_semana', ''))),
+        ("Horário",       disp.get('horario', '')),
+        ("Tempo/sessão",  f"{disp.get('tempo_sessao','')} min"),
+        ("Local",         disp.get('local', '')),
+        ("Equipamentos",  ", ".join(disp.get('equipamentos', []))),
+        ("Não gosta de",  disp.get('nao_gosta', '') or "—"),
+        ("Prefere",       disp.get('prefere', '') or "—"),
+    ])
+
+    med = dados.get('medidas', {})
+    p_v  = med.get('peso', 0)
+    a_v  = med.get('altura', 0)
+    ca_v = med.get('circ_abdominal', 0)
+    pg_v = med.get('perc_gordura', 0)
+    linhas += bloco("7. MEDIDAS INICIAIS", [
+        ("Peso",          f"{p_v} kg" if p_v > 0 else "Não informado"),
+        ("Altura",        f"{a_v} cm" if a_v > 0 else "Não informado"),
+        ("Circ. abd.",    f"{ca_v} cm" if ca_v > 0 else "Não informado"),
+        ("% gordura",     f"{pg_v}%" if pg_v > 0 else "Não informado"),
+        ("Observações",   med.get('obs', '') or "—"),
+    ])
+
+    termo = dados.get('termo', {})
+    linhas += bloco("8. TERMO", [
+        ("Aceito",     "Sim" if termo.get('aceito') else "Não"),
+        ("Assinatura", termo.get('assinatura', '')),
+    ])
+
+    return "\n".join(linhas)
+
+
+def _enviar_email(nome, dados):
+    """Retorna (bool sucesso, str mensagem)."""
+    try:
+        from config import EMAIL_REMETENTE, EMAIL_SENHA, EMAIL_DESTINATARIO
+        if not EMAIL_REMETENTE or not EMAIL_SENHA:
+            return False, "nao_configurado"
+        corpo = _formatar_anamnese_texto(dados)
+        msg = MIMEMultipart()
+        msg['From']    = EMAIL_REMETENTE
+        msg['To']      = EMAIL_DESTINATARIO
+        msg['Subject'] = f"Nova Anamnese — {nome}"
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        with smtplib.SMTP('smtp.gmail.com', 587) as srv:
+            srv.starttls()
+            srv.login(EMAIL_REMETENTE, EMAIL_SENHA)
+            srv.sendmail(EMAIL_REMETENTE, EMAIL_DESTINATARIO, msg.as_string())
+        return True, "ok"
+    except Exception as e:
+        return False, str(e)
+
+
+# ── Constantes ────────────────────────────────────────────────────────────────
+
+PARQ_PERGUNTAS = [
+    "Seu médico já disse que você tem algum problema cardíaco?",
+    "Você sente dor no peito ao praticar atividade física?",
+    "Você sentiu dor no peito no último mês sem fazer exercício?",
+    "Você já perdeu o equilíbrio por tontura ou já desmaiou?",
+    "Você tem algum problema ósseo ou articular que piora com exercício?",
+    "Seu médico já receitou medicamento para pressão ou problema cardíaco?",
+    "Você tem alguma outra razão pela qual não deveria praticar exercício?",
+]
 
 DIVISOES_F = {
-    "AB Feminino 4x  —  A: Pernas/Glúteos  |  B: Braço/Ombro":                                       "AB_4x",
-    "ABC Feminino  —  A: Glúteos/Post.  |  B: Pernas/Quad  |  C: Upper Body":                        "ABC",
-    "ABCD Feminino  —  A: Glúteos  |  B: Pernas  |  C: Costas/Bíceps  |  D: Ombro/Tríceps":         "ABCD",
-    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                    "full_body_3x",
-    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                              "full_body_50_2x",
-    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                          "full_body_50_3x",
+    "AB Feminino 4x  —  A: Pernas/Glúteos  |  B: Braço/Ombro":                                     "AB_4x",
+    "ABC Feminino  —  A: Glúteos/Post.  |  B: Pernas/Quad  |  C: Upper Body":                      "ABC",
+    "ABCD Feminino  —  A: Glúteos  |  B: Pernas  |  C: Costas/Bíceps  |  D: Ombro/Tríceps":       "ABCD",
+    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                  "full_body_3x",
+    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                            "full_body_50_2x",
+    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                        "full_body_50_3x",
 }
 
 DIVISOES_M = {
-    "AB Masculino 4x  —  A: Peito/Tríceps/Ombro/Quad  |  B: Costas/Bíceps/Post.":                   "AB_4x",
-    "ABC Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas/Ombro":                  "ABC",
-    "ABCD Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas  |  D: Ombro/Core":    "ABCD",
-    "Push Pull Legs  —  Push: Peito/Ombro/Tríceps  |  Pull: Costas/Bíceps  |  Legs: Pernas":        "push_pull_legs",
-    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                    "full_body_3x",
-    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                              "full_body_50_2x",
-    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                          "full_body_50_3x",
+    "AB Masculino 4x  —  A: Peito/Tríceps/Ombro/Quad  |  B: Costas/Bíceps/Post.":                 "AB_4x",
+    "ABC Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas/Ombro":                "ABC",
+    "ABCD Masculino  —  A: Peito/Tríceps  |  B: Costas/Bíceps  |  C: Pernas  |  D: Ombro/Core":  "ABCD",
+    "Push Pull Legs  —  Push: Peito/Ombro/Tríceps  |  Pull: Costas/Bíceps  |  Legs: Pernas":      "push_pull_legs",
+    "Full Body 3x  —  FB-A, FB-B, FB-C com exercícios diferentes":                                  "full_body_3x",
+    "— 50+ —  Full Body 2x  —  FB-A e FB-B alternados (baixo impacto)":                            "full_body_50_2x",
+    "— 50+ —  Full Body 3x  —  FB-A, FB-B e FB-C  (Core/Equilíbrio no C)":                        "full_body_50_3x",
 }
 
 PERIODIZACOES = {
@@ -115,189 +208,747 @@ PERIODIZACOES = {
 }
 
 OBJETIVOS = {
-    "Hipertrofia":        "hipertrofia",
-    "Emagrecimento":      "emagrecimento",
-    "Correção Postural":  "postural",
+    "Hipertrofia":       "hipertrofia",
+    "Emagrecimento":     "emagrecimento",
+    "Correção Postural": "postural",
 }
 
 NIVEIS = {
-    "Iniciante  —  até 1 ano de treino":          "iniciante",
-    "Intermediário  —  1 a 3 anos de treino":     "intermediario",
-    "Avançado  —  mais de 3 anos de treino":      "avancado",
+    "Iniciante  —  até 1 ano de treino":        "iniciante",
+    "Intermediário  —  1 a 3 anos de treino":   "intermediario",
+    "Avançado  —  mais de 3 anos de treino":    "avancado",
 }
 
 EQUIPAMENTOS_OPCOES = ["Academia completa", "Halteres", "Elásticos", "Peso corporal", "Outro"]
 
 
-# ── Seção: Dados do Cliente ───────────────────────────────────────────────────
+# ── Exibição de anamnese (área da professora) ─────────────────────────────────
 
-with st.expander("📋 Dados do Cliente", expanded=True):
-    nome = st.text_input("Nome completo", placeholder="Ex: Maria Silva")
+def _exibir_anamnese_streamlit(dados):
+    dp = dados.get('dados_pessoais', {})
+    with st.expander("📋 Dados Pessoais", expanded=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**Nome:** {dp.get('nome','')}")
+            st.markdown(f"**Nascimento:** {dp.get('data_nascimento','')}")
+            st.markdown(f"**Sexo:** {dp.get('sexo','')}")
+            st.markdown(f"**Telefone:** {dp.get('telefone','')}")
+        with c2:
+            st.markdown(f"**E-mail:** {dp.get('email','')}")
+            st.markdown(f"**Ocupação:** {dp.get('ocupacao','')}")
+            st.markdown(f"**Cidade/Estado:** {dp.get('cidade_estado','')}")
 
-    col_idade, col_sexo = st.columns([1, 2])
-    with col_idade:
-        idade = st.number_input("Idade", min_value=10, max_value=100, value=30, step=1)
-    with col_sexo:
-        sexo_label = st.radio("Sexo", ["Feminino", "Masculino"], horizontal=True)
+    obj = dados.get('objetivo', {})
+    with st.expander("🎯 Objetivo"):
+        st.markdown(f"**Objetivos:** {', '.join(obj.get('objetivos',[]))}")
+        if obj.get('descricao'):
+            st.markdown(f"**Descrição:** {obj['descricao']}")
+        st.markdown(f"**Praticou antes:** {obj.get('praticou_antes','')}")
+        if obj.get('atividade_anterior'):
+            st.markdown(f"**Atividade anterior:** {obj['atividade_anterior']}")
+        if obj.get('motivo_parou'):
+            st.markdown(f"**Por que parou:** {obj['motivo_parou']}")
 
-    sexo = "F" if sexo_label == "Feminino" else "M"
+    parq = dados.get('parq', {})
+    with st.expander("❤️ PAR-Q+"):
+        for q in parq.get('questoes', []):
+            icone = "🔴" if q['resposta'] == "Sim" else "🟢"
+            st.markdown(f"{icone} **{q['resposta']}** — {q['pergunta']}")
+        if parq.get('alerta_medico'):
+            st.warning("⚠️ Uma ou mais respostas indicam necessidade de avaliação médica.")
 
-    col_peso, col_altura = st.columns(2)
-    with col_peso:
-        peso = st.number_input("Peso (kg)", min_value=30.0, max_value=300.0,
-                               value=70.0, step=0.5, format="%.1f")
-    with col_altura:
-        altura = st.number_input("Altura (cm)", min_value=100, max_value=250,
-                                 value=170, step=1)
+    hs = dados.get('historico_saude', {})
+    with st.expander("🏥 Histórico de Saúde"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**Doenças:** {hs.get('doencas','') or 'Nenhuma'}")
+            st.markdown(f"**Medicamentos:** {hs.get('medicamentos','') or 'Nenhum'}")
+            st.markdown(f"**Cirurgias:** {hs.get('cirurgia','') or 'Nenhuma'}")
+            st.markdown(f"**Hist. fam. cardíaco:** {hs.get('historico_cardiaco','')}")
+            st.markdown(f"**Diabetes:** {hs.get('diabetes','')}")
+        with c2:
+            st.markdown(f"**Hipertensão:** {hs.get('hipertensao','')}")
+            coluna_str = hs.get('coluna','Não')
+            if hs.get('coluna_regiao'):
+                coluna_str += f" — {hs['coluna_regiao']}"
+            st.markdown(f"**Coluna:** {coluna_str}")
+            st.markdown(f"**Lesões:** {hs.get('lesoes','') or 'Nenhuma'}")
+            st.markdown(f"**Gravidez:** {hs.get('gravidez','')}")
 
-    col_data, col_periodo = st.columns(2)
-    with col_data:
-        data_inicio = st.date_input("Data de início", value=date.today(), format="DD/MM/YYYY")
-    with col_periodo:
-        periodo = st.selectbox("Período do plano (semanas)", [4, 6, 8, 10, 12, 16], index=2)
+    ev = dados.get('estilo_vida', {})
+    with st.expander("🌿 Estilo de Vida"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**Sono:** {ev.get('horas_sono','')} — {ev.get('qualidade_sono','')}")
+            st.markdown(f"**Estresse:** {ev.get('estresse','')}")
+            st.markdown(f"**Álcool:** {ev.get('alcool','')}")
+        with c2:
+            st.markdown(f"**Tabagismo:** {ev.get('fuma','')}")
+            st.markdown(f"**Atividade no trabalho:** {ev.get('atividade_trabalho','')}")
+            st.markdown(f"**Horas sentado/dia:** {ev.get('horas_sentado','')}")
 
-    restricoes = st.text_area(
-        "Restrições / Lesões",
-        placeholder="Descreva lesões ou limitações (deixe em branco se não houver)",
-        height=80,
+    disp = dados.get('disponibilidade', {})
+    with st.expander("📅 Disponibilidade e Preferências"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**Dias/semana:** {disp.get('dias_semana','')}")
+            st.markdown(f"**Horário:** {disp.get('horario','')}")
+            st.markdown(f"**Tempo/sessão:** {disp.get('tempo_sessao','')} min")
+            st.markdown(f"**Local:** {disp.get('local','')}")
+        with c2:
+            st.markdown(f"**Equipamentos:** {', '.join(disp.get('equipamentos',[]))}")
+            st.markdown(f"**Não gosta de:** {disp.get('nao_gosta','') or '—'}")
+            st.markdown(f"**Prefere:** {disp.get('prefere','') or '—'}")
+
+    med = dados.get('medidas', {})
+    with st.expander("📏 Medidas Iniciais"):
+        c1, c2 = st.columns(2)
+        p_v  = med.get('peso', 0)
+        a_v  = med.get('altura', 0)
+        ca_v = med.get('circ_abdominal', 0)
+        pg_v = med.get('perc_gordura', 0)
+        with c1:
+            st.markdown(f"**Peso:** {f'{p_v} kg' if p_v > 0 else 'Não informado'}")
+            st.markdown(f"**Altura:** {f'{a_v} cm' if a_v > 0 else 'Não informado'}")
+        with c2:
+            st.markdown(f"**Circ. abdominal:** {f'{ca_v} cm' if ca_v > 0 else 'Não informado'}")
+            st.markdown(f"**% gordura:** {f'{pg_v}%' if pg_v > 0 else 'Não informado'}")
+        if med.get('obs'):
+            st.markdown(f"**Observações:** {med['obs']}")
+
+    termo = dados.get('termo', {})
+    with st.expander("📝 Termo de Responsabilidade"):
+        st.markdown(f"**Aceito:** {'✅ Sim' if termo.get('aceito') else '❌ Não'}")
+        st.markdown(f"**Assinatura digital:** {termo.get('assinatura','')}")
+
+
+# ── Página: Home ──────────────────────────────────────────────────────────────
+
+def _pagina_home():
+    st.markdown("""
+    <div style="text-align:center; padding: 2.5rem 0 1.5rem 0;">
+        <div style="font-size: 3rem;">🏋️</div>
+        <h1 style="font-size: 2rem; font-weight: 700; margin: 0.3rem 0;">Studio Personal Training</h1>
+        <p style="color: #666; font-size: 1.05rem; margin: 0;">Como você deseja continuar?</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    col_l, col_aluno, col_meio, col_prof, col_r = st.columns([0.5, 3, 0.5, 3, 0.5])
+
+    with col_aluno:
+        st.markdown("""
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.2rem;
+                    text-align:center; background:#f8f9fa; min-height:190px;">
+            <div style="font-size:2.8rem; margin-bottom:0.4rem;">🧑‍🤸</div>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem;">Sou Aluno</h3>
+            <p style="color:#666; font-size:0.88rem; margin:0; line-height:1.5;">
+                Preencha sua ficha de anamnese para iniciar seu programa de treino personalizado.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Acessar Área do Aluno", key="btn_home_aluno",
+                     use_container_width=True, type="primary"):
+            st.session_state['area'] = 'cliente'
+            st.rerun()
+
+    with col_prof:
+        st.markdown("""
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.2rem;
+                    text-align:center; background:#f8f9fa; min-height:190px;">
+            <div style="font-size:2.8rem; margin-bottom:0.4rem;">👩‍💼</div>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem;">Acesso Professora</h3>
+            <p style="color:#666; font-size:0.88rem; margin:0; line-height:1.5;">
+                Gerencie fichas de anamnese e gere planos de treino personalizados.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Acesso Restrito", key="btn_home_prof", use_container_width=True):
+            st.session_state['area'] = 'professora'
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        '<p style="text-align:center; color:#bbb; font-size:0.8rem;">'
+        'Studio Personal Training — Sistema de Gestão</p>',
+        unsafe_allow_html=True,
     )
 
 
-# ── Seção: Configuração do Treino ─────────────────────────────────────────────
+# ── Página: Anamnese (cliente) ────────────────────────────────────────────────
 
-with st.expander("⚙️ Configuração do Treino", expanded=True):
-    col_obj, col_nivel = st.columns(2)
-    with col_obj:
-        objetivo_label = st.selectbox("Objetivo", list(OBJETIVOS.keys()))
-    with col_nivel:
-        nivel_label = st.selectbox("Nível", list(NIVEIS.keys()))
+def _pagina_anamnese():
+    if st.button("← Início", key="btn_voltar_anamnese"):
+        st.session_state['area'] = None
+        st.session_state.pop('anamnese_confirmada', None)
+        st.rerun()
 
-    col_freq, col_tempo = st.columns(2)
-    with col_freq:
-        frequencia = st.selectbox(
-            "Frequência semanal", [2, 3, 4, 5, 6], index=2,
-            format_func=lambda x: f"{x}x por semana",
+    # Tela de confirmação pós-envio
+    if st.session_state.get('anamnese_confirmada'):
+        st.balloons()
+        st.success(
+            "✅ Anamnese enviada com sucesso!  "
+            "Em breve a professora entrará em contato."
         )
-    with col_tempo:
-        tempo = st.selectbox(
-            "Tempo por sessão", [30, 45, 60, 75, 90], index=2,
-            format_func=lambda x: f"{x} minutos",
+        st.info("Você pode fechar esta página ou clicar em '← Início' para voltar.")
+        return
+
+    st.title("Ficha de Anamnese")
+    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+    st.divider()
+
+    # ── 1. Dados Pessoais ──────────────────────────────────────────────────────
+    with st.expander("1. Dados Pessoais", expanded=True):
+        nome_cl = st.text_input("Nome completo *", key="an_nome")
+
+        col_nasc, col_sexo = st.columns([1, 2])
+        with col_nasc:
+            data_nasc = st.date_input("Data de nascimento",
+                                      value=None, format="DD/MM/YYYY", key="an_data_nasc")
+        with col_sexo:
+            sexo_cl = st.radio("Sexo", ["Feminino", "Masculino"],
+                               horizontal=True, key="an_sexo")
+
+        col_tel, col_email = st.columns(2)
+        with col_tel:
+            telefone_cl = st.text_input("Telefone / WhatsApp", key="an_tel")
+        with col_email:
+            email_cl = st.text_input("E-mail", key="an_email")
+
+        col_ocup, col_cidade = st.columns(2)
+        with col_ocup:
+            ocupacao_cl = st.text_input("Ocupação profissional", key="an_ocupacao")
+        with col_cidade:
+            cidade_cl = st.text_input("Cidade / Estado", key="an_cidade")
+
+    # ── 2. Objetivo ────────────────────────────────────────────────────────────
+    with st.expander("2. Objetivo", expanded=True):
+        objetivos_opcoes = [
+            "Emagrecimento", "Hipertrofia", "Condicionamento físico",
+            "Saúde e qualidade de vida", "Reabilitação", "Correção postural", "Outro",
+        ]
+        objetivos_sel = st.multiselect(
+            "Objetivo principal (pode marcar mais de um) *",
+            objetivos_opcoes, key="an_objetivos",
         )
+        objetivo_desc = st.text_area("Descreva seu objetivo com suas palavras",
+                                     height=80, key="an_obj_desc")
+        praticou = st.radio("Já praticou exercícios antes?", ["Não", "Sim"],
+                            horizontal=True, key="an_praticou")
+        atividade_ant = ""
+        motivo_parou  = ""
+        if praticou == "Sim":
+            atividade_ant = st.text_input("Qual atividade e por quanto tempo?",
+                                          key="an_atividade_ant")
+            motivo_parou  = st.text_input("Por que parou? (opcional)",
+                                          key="an_motivo_parou")
 
-    equipamentos_sel = st.multiselect(
-        "Equipamentos disponíveis",
-        EQUIPAMENTOS_OPCOES,
-        default=["Academia completa"],
-    )
+    # ── 3. PAR-Q+ ─────────────────────────────────────────────────────────────
+    with st.expander("3. PAR-Q+ — Prontidão para Atividade Física", expanded=True):
+        st.caption("Responda com sinceridade. Essas informações são confidenciais.")
+        parq_resps = []
+        for i, pergunta in enumerate(PARQ_PERGUNTAS):
+            resp = st.radio(pergunta, ["Não", "Sim"],
+                            horizontal=True, key=f"an_parq_{i}", index=0)
+            parq_resps.append(resp)
+        if "Sim" in parq_resps:
+            st.warning("⚠️ Recomendamos que você consulte um médico antes de iniciar o programa.")
 
-    equipamentos_outro_txt = ""
-    if "Outro" in equipamentos_sel:
-        equipamentos_outro_txt = st.text_input(
-            "Descreva o(s) equipamento(s) adicional(is):",
-            placeholder="Ex: Kettlebell, TRX",
+    # ── 4. Histórico de Saúde ─────────────────────────────────────────────────
+    with st.expander("4. Histórico de Saúde", expanded=True):
+        doencas     = st.text_area("Possui alguma doença diagnosticada?",
+                                   placeholder="Deixe em branco se não houver",
+                                   height=60, key="an_doencas")
+        medicamentos = st.text_area("Faz uso de medicamentos? Quais?",
+                                    placeholder="Deixe em branco se não houver",
+                                    height=60, key="an_meds")
+        cirurgia    = st.text_input("Já fez cirurgia? Qual e quando?",
+                                    placeholder="Deixe em branco se não houver",
+                                    key="an_cirurgia")
+
+        col_c1, col_c2, col_c3 = st.columns(3)
+        with col_c1:
+            hist_cardiaco = st.radio("Histórico familiar cardíaco?", ["Não", "Sim"],
+                                     horizontal=True, key="an_hist_card")
+        with col_c2:
+            diabetes      = st.selectbox("Diabetes?",
+                                         ["Não", "Sim", "Pré-diabetes"], key="an_diabetes")
+        with col_c3:
+            hipertensao   = st.selectbox("Hipertensão?",
+                                         ["Não", "Sim", "Controlada c/ medicamento"],
+                                         key="an_hiper")
+
+        coluna_resp  = st.radio("Tem problemas na coluna?", ["Não", "Sim"],
+                                horizontal=True, key="an_coluna")
+        coluna_regiao = ""
+        if coluna_resp == "Sim":
+            coluna_regiao = st.text_input("Qual região? (ex: lombar, cervical)",
+                                          key="an_coluna_reg")
+
+        lesoes   = st.text_area("Tem alguma lesão ou limitação física atual?",
+                                placeholder="Descreva se houver", height=60, key="an_lesoes")
+        gravidez = st.selectbox("Está grávida ou pode estar grávida?",
+                                ["Não se aplica", "Não", "Sim"], key="an_gravidez")
+
+    # ── 5. Estilo de Vida ─────────────────────────────────────────────────────
+    with st.expander("5. Estilo de Vida", expanded=True):
+        col_e1, col_e2 = st.columns(2)
+        with col_e1:
+            horas_sono   = st.selectbox("Horas de sono por noite",
+                                        ["menos de 5h", "5-6h", "7-8h", "mais de 8h"],
+                                        index=2, key="an_sono")
+            qual_sono    = st.selectbox("Qualidade do sono",
+                                        ["Boa", "Regular", "Ruim"], key="an_qual_sono")
+            estresse     = st.selectbox("Nível de estresse",
+                                        ["Baixo", "Moderado", "Alto", "Muito alto"],
+                                        index=1, key="an_estresse")
+            alcool       = st.selectbox("Consome bebida alcoólica?",
+                                        ["Não", "Ocasionalmente", "Frequentemente"],
+                                        key="an_alcool")
+        with col_e2:
+            fuma         = st.selectbox("Fuma?",
+                                        ["Não", "Sim", "Ex-fumante"], key="an_fuma")
+            ativ_trab    = st.selectbox("Nível de atividade no trabalho",
+                                        ["Sedentário", "Leve", "Moderado", "Intenso"],
+                                        key="an_trab")
+            h_sentado    = st.selectbox("Horas sentado por dia",
+                                        ["menos de 4h", "4-6h", "6-8h", "mais de 8h"],
+                                        index=1, key="an_sentado")
+
+    # ── 6. Disponibilidade e Preferências ─────────────────────────────────────
+    with st.expander("6. Disponibilidade e Preferências", expanded=True):
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            dias_semana_cl  = st.selectbox("Dias por semana para treinar",
+                                           [2, 3, 4, 5, 6], index=1, key="an_dias")
+            horario_cl      = st.selectbox("Horário preferido",
+                                           ["Manhã", "Tarde", "Noite", "Indiferente"],
+                                           key="an_horario")
+            tempo_cl        = st.selectbox("Tempo por sessão",
+                                           [30, 45, 60, 75, 90], index=2, key="an_tempo",
+                                           format_func=lambda x: f"{x} min")
+            local_cl        = st.selectbox("Onde vai treinar?",
+                                           ["Academia", "Em casa", "Ao ar livre", "Misto"],
+                                           key="an_local")
+
+        equip_cl_opcoes = ["Academia completa", "Halteres", "Barras", "Elásticos",
+                           "Peso corporal", "Bicicleta ergométrica", "Esteira", "Outro"]
+        equipamentos_cl = st.multiselect("Equipamentos disponíveis",
+                                         equip_cl_opcoes, key="an_equip")
+        nao_gosta_cl    = st.text_input("Atividade que não gosta ou não quer fazer (opcional)",
+                                        key="an_nao_gosta")
+        prefere_cl      = st.text_input("Atividade que gosta ou prefere (opcional)",
+                                        key="an_prefere")
+
+    # ── 7. Medidas Iniciais ───────────────────────────────────────────────────
+    with st.expander("7. Medidas Iniciais (opcional)", expanded=False):
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            peso_cl   = st.number_input("Peso atual (kg) — 0 = não informado",
+                                        min_value=0.0, max_value=300.0,
+                                        value=0.0, step=0.5, format="%.1f", key="an_peso")
+            altura_cl = st.number_input("Altura (cm) — 0 = não informado",
+                                        min_value=0, max_value=250, value=0, key="an_altura")
+        with col_m2:
+            circ_abd  = st.number_input("Circunferência abdominal (cm)",
+                                        min_value=0.0, value=0.0,
+                                        step=0.5, format="%.1f", key="an_circ")
+            perc_gord = st.number_input("% de gordura — 0 = não informado",
+                                        min_value=0.0, max_value=100.0,
+                                        value=0.0, step=0.1, format="%.1f", key="an_gord")
+        obs_med = st.text_area("Observações sobre medidas", height=60, key="an_obs_med")
+
+    # ── 8. Termo de Responsabilidade ──────────────────────────────────────────
+    with st.expander("8. Termo de Responsabilidade", expanded=True):
+        st.info(
+            "Declaro que as informações acima são verdadeiras e que fui orientado(a) "
+            "sobre a importância de comunicar qualquer alteração no meu estado de saúde "
+            "à professora responsável. Estou ciente de que o programa de treinamento "
+            "será elaborado com base nas informações fornecidas."
         )
+        aceita_termo  = st.checkbox("Li e concordo com o termo acima *", key="an_termo")
+        assinatura_cl = st.text_input("Nome completo para assinatura digital *",
+                                      key="an_assinatura")
 
-    divisoes_map = DIVISOES_F if sexo == "F" else DIVISOES_M
-    divisao_label = st.selectbox("Divisão de treino", list(divisoes_map.keys()))
+    st.divider()
 
-    periodizacao_label = st.selectbox("Periodização", list(PERIODIZACOES.keys()))
+    # ── Botão enviar ──────────────────────────────────────────────────────────
+    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    with col_btn:
+        enviar = st.button("📨  Enviar Anamnese", use_container_width=True,
+                           type="primary", key="btn_enviar_anamnese")
+
+    if enviar:
+        erros = []
+        if not nome_cl.strip():
+            erros.append("Informe o nome completo.")
+        if not objetivos_sel:
+            erros.append("Selecione pelo menos um objetivo principal.")
+        if not aceita_termo:
+            erros.append("Você deve aceitar o termo de responsabilidade.")
+        if not assinatura_cl.strip():
+            erros.append("Informe o nome para assinatura digital.")
+
+        if erros:
+            for e in erros:
+                st.error(e)
+        else:
+            dados_anamnese = {
+                "dados_pessoais": {
+                    "nome":           nome_cl.strip(),
+                    "data_nascimento": data_nasc.strftime("%d/%m/%Y") if data_nasc else "",
+                    "sexo":           sexo_cl,
+                    "telefone":       telefone_cl.strip(),
+                    "email":          email_cl.strip(),
+                    "ocupacao":       ocupacao_cl.strip(),
+                    "cidade_estado":  cidade_cl.strip(),
+                },
+                "objetivo": {
+                    "objetivos":         objetivos_sel,
+                    "descricao":         objetivo_desc.strip(),
+                    "praticou_antes":    praticou,
+                    "atividade_anterior": atividade_ant.strip() if praticou == "Sim" else "",
+                    "motivo_parou":      motivo_parou.strip() if praticou == "Sim" else "",
+                },
+                "parq": {
+                    "questoes": [
+                        {"pergunta": p, "resposta": r}
+                        for p, r in zip(PARQ_PERGUNTAS, parq_resps)
+                    ],
+                    "alerta_medico": "Sim" in parq_resps,
+                },
+                "historico_saude": {
+                    "doencas":          doencas.strip(),
+                    "medicamentos":     medicamentos.strip(),
+                    "cirurgia":         cirurgia.strip(),
+                    "historico_cardiaco": hist_cardiaco,
+                    "diabetes":         diabetes,
+                    "hipertensao":      hipertensao,
+                    "coluna":           coluna_resp,
+                    "coluna_regiao":    coluna_regiao.strip() if coluna_resp == "Sim" else "",
+                    "lesoes":           lesoes.strip(),
+                    "gravidez":         gravidez,
+                },
+                "estilo_vida": {
+                    "horas_sono":         horas_sono,
+                    "qualidade_sono":     qual_sono,
+                    "estresse":           estresse,
+                    "alcool":             alcool,
+                    "fuma":               fuma,
+                    "atividade_trabalho": ativ_trab,
+                    "horas_sentado":      h_sentado,
+                },
+                "disponibilidade": {
+                    "dias_semana":  dias_semana_cl,
+                    "horario":      horario_cl,
+                    "tempo_sessao": tempo_cl,
+                    "local":        local_cl,
+                    "equipamentos": equipamentos_cl,
+                    "nao_gosta":    nao_gosta_cl.strip(),
+                    "prefere":      prefere_cl.strip(),
+                },
+                "medidas": {
+                    "peso":           float(peso_cl),
+                    "altura":         int(altura_cl),
+                    "circ_abdominal": float(circ_abd),
+                    "perc_gordura":   float(perc_gord),
+                    "obs":            obs_med.strip(),
+                },
+                "termo": {
+                    "aceito":     aceita_termo,
+                    "assinatura": assinatura_cl.strip(),
+                },
+                "data_envio": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                "timestamp":  datetime.now().isoformat(),
+            }
+
+            # Salvar JSON
+            os.makedirs("dados_clientes", exist_ok=True)
+            slug = _slug(nome_cl.strip())
+            ts   = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+            arquivo_json = f"dados_clientes/anamnese_{slug}_{ts}.json"
+            with open(arquivo_json, "w", encoding="utf-8") as f:
+                json.dump(dados_anamnese, f, ensure_ascii=False, indent=2)
+
+            # Enviar e-mail (falha silenciosa — JSON já está salvo)
+            _enviar_email(nome_cl.strip(), dados_anamnese)
+
+            st.session_state['anamnese_confirmada'] = True
+            st.rerun()
 
 
-st.divider()
+# ── Tab: Gerador de Treino ────────────────────────────────────────────────────
 
+def _tab_gerador_treino():
+    st.markdown("### Gerador de Treino Personalizado")
 
-# ── Botão principal ───────────────────────────────────────────────────────────
+    with st.expander("📋 Dados do Cliente", expanded=True):
+        nome = st.text_input("Nome completo", placeholder="Ex: Maria Silva", key="gt_nome")
 
-col_l, col_btn, col_r = st.columns([1, 2, 1])
-with col_btn:
-    gerar_clicado = st.button(
-        "🏋️  Gerar Treino em PDF",
-        use_container_width=True,
-        type="primary",
-    )
+        col_idade, col_sexo = st.columns([1, 2])
+        with col_idade:
+            idade = st.number_input("Idade", min_value=10, max_value=100,
+                                    value=30, step=1, key="gt_idade")
+        with col_sexo:
+            sexo_label = st.radio("Sexo", ["Feminino", "Masculino"],
+                                  horizontal=True, key="gt_sexo")
+        sexo = "F" if sexo_label == "Feminino" else "M"
 
+        col_peso, col_altura = st.columns(2)
+        with col_peso:
+            peso = st.number_input("Peso (kg)", min_value=30.0, max_value=300.0,
+                                   value=70.0, step=0.5, format="%.1f", key="gt_peso")
+        with col_altura:
+            altura = st.number_input("Altura (cm)", min_value=100, max_value=250,
+                                     value=170, step=1, key="gt_altura")
 
-# ── Geração do PDF ────────────────────────────────────────────────────────────
+        col_data, col_periodo = st.columns(2)
+        with col_data:
+            data_inicio = st.date_input("Data de início", value=date.today(),
+                                        format="DD/MM/YYYY", key="gt_data")
+        with col_periodo:
+            periodo = st.selectbox("Período do plano (semanas)",
+                                   [4, 6, 8, 10, 12, 16], index=2, key="gt_periodo")
 
-if gerar_clicado:
-    # Validações
-    erros = []
-    if not nome.strip():
-        erros.append("Informe o nome completo do cliente.")
-    if not equipamentos_sel:
-        erros.append("Selecione pelo menos um equipamento.")
-    if "Outro" in equipamentos_sel and not equipamentos_outro_txt.strip():
-        erros.append("Descreva o equipamento personalizado selecionado.")
+        restricoes = st.text_area("Restrições / Lesões",
+                                  placeholder="Descreva lesões ou limitações (deixe em branco se não houver)",
+                                  height=80, key="gt_restricoes")
 
-    if erros:
-        for e in erros:
-            st.error(e)
-        st.stop()
+    with st.expander("⚙️ Configuração do Treino", expanded=True):
+        col_obj, col_nivel = st.columns(2)
+        with col_obj:
+            objetivo_label = st.selectbox("Objetivo", list(OBJETIVOS.keys()), key="gt_objetivo")
+        with col_nivel:
+            nivel_label = st.selectbox("Nível", list(NIVEIS.keys()), key="gt_nivel")
 
-    # Montar string de equipamentos
-    equip_partes = [
-        equipamentos_outro_txt.strip() if item == "Outro" else item
-        for item in equipamentos_sel
-    ]
-    equip_str = ", ".join(equip_partes)
+        col_freq, col_tempo = st.columns(2)
+        with col_freq:
+            frequencia = st.selectbox("Frequência semanal", [2, 3, 4, 5, 6], index=2,
+                                      key="gt_freq", format_func=lambda x: f"{x}x por semana")
+        with col_tempo:
+            tempo = st.selectbox("Tempo por sessão", [30, 45, 60, 75, 90], index=2,
+                                 key="gt_tempo", format_func=lambda x: f"{x} minutos")
 
-    objetivo        = OBJETIVOS[objetivo_label]
-    nivel           = NIVEIS[nivel_label]
-    divisao         = divisoes_map[divisao_label]
-    periodizacao_key = PERIODIZACOES[periodizacao_label]
+        equipamentos_sel = st.multiselect("Equipamentos disponíveis", EQUIPAMENTOS_OPCOES,
+                                          default=["Academia completa"], key="gt_equip")
+        equip_outro = ""
+        if "Outro" in equipamentos_sel:
+            equip_outro = st.text_input("Descreva o(s) equipamento(s) adicional(is):",
+                                        placeholder="Ex: Kettlebell, TRX", key="gt_equip_outro")
 
-    dados = {
-        'nome':         nome.strip(),
-        'idade':        int(idade),
-        'sexo':         sexo,
-        'peso':         float(peso),
-        'altura':       int(altura),
-        'objetivo':     objetivo,
-        'nivel':        nivel,
-        'divisao':      divisao,
-        'periodizacao': periodizacao_key,
-        'frequencia':   frequencia,
-        'tempo':        tempo,
-        'equipamentos': equip_str,
-        'restricoes':   restricoes.strip() if restricoes else "",
-        'data_inicio':  data_inicio.strftime("%d/%m/%Y"),
-        'periodo':      periodo,
-    }
+        divisoes_map  = DIVISOES_F if sexo == "F" else DIVISOES_M
+        divisao_label = st.selectbox("Divisão de treino", list(divisoes_map.keys()), key="gt_divisao")
+        period_label  = st.selectbox("Periodização", list(PERIODIZACOES.keys()), key="gt_period")
 
-    sexo_key    = "masculino" if sexo == "M" else "feminino"
-    treinos     = EXERCICIOS[sexo_key][divisao]
-    descricoes  = DESCRICOES_TREINO[sexo_key][divisao]
-    cardio      = CARDIO[objetivo]
-    progressao  = PROGRESSAO[nivel]
-    periodizacao = PERIODIZACAO[periodizacao_key]
-    observacoes = OBSERVACOES[objetivo]
+    st.divider()
 
-    data_hoje    = datetime.now().strftime("%Y-%m-%d")
-    nome_arquivo = f"{_slug(nome.strip())}_{data_hoje}.pdf"
+    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    with col_btn:
+        gerar_clicado = st.button("🏋️  Gerar Treino em PDF", use_container_width=True,
+                                  type="primary", key="btn_gerar_treino")
 
-    with st.spinner("Gerando seu treino..."):
-        try:
-            tmp_path = os.path.join(tempfile.gettempdir(), nome_arquivo)
-            gerar_pdf(
-                dados, treinos, descricoes,
-                cardio, progressao, periodizacao, observacoes,
-                tmp_path,
+    if gerar_clicado:
+        erros = []
+        if not nome.strip():
+            erros.append("Informe o nome completo do cliente.")
+        if not equipamentos_sel:
+            erros.append("Selecione pelo menos um equipamento.")
+        if "Outro" in equipamentos_sel and not equip_outro.strip():
+            erros.append("Descreva o equipamento personalizado selecionado.")
+        if erros:
+            for e in erros:
+                st.error(e)
+            return
+
+        equip_str = ", ".join(
+            equip_outro.strip() if item == "Outro" else item
+            for item in equipamentos_sel
+        )
+        objetivo      = OBJETIVOS[objetivo_label]
+        nivel         = NIVEIS[nivel_label]
+        divisao       = divisoes_map[divisao_label]
+        period_key    = PERIODIZACOES[period_label]
+
+        dados = {
+            'nome':         nome.strip(),
+            'idade':        int(idade),
+            'sexo':         sexo,
+            'peso':         float(peso),
+            'altura':       int(altura),
+            'objetivo':     objetivo,
+            'nivel':        nivel,
+            'divisao':      divisao,
+            'periodizacao': period_key,
+            'frequencia':   frequencia,
+            'tempo':        tempo,
+            'equipamentos': equip_str,
+            'restricoes':   restricoes.strip() if restricoes else "",
+            'data_inicio':  data_inicio.strftime("%d/%m/%Y"),
+            'periodo':      periodo,
+        }
+
+        sexo_key    = "masculino" if sexo == "M" else "feminino"
+        treinos     = EXERCICIOS[sexo_key][divisao]
+        descricoes  = DESCRICOES_TREINO[sexo_key][divisao]
+        cardio      = CARDIO[objetivo]
+        progressao  = PROGRESSAO[nivel]
+        periodizacao = PERIODIZACAO[period_key]
+        observacoes = OBSERVACOES[objetivo]
+
+        data_hoje    = datetime.now().strftime("%Y-%m-%d")
+        nome_arquivo = f"{_slug(nome.strip())}_{data_hoje}.pdf"
+
+        with st.spinner("Gerando seu treino..."):
+            try:
+                tmp_path = os.path.join(tempfile.gettempdir(), nome_arquivo)
+                gerar_pdf(dados, treinos, descricoes,
+                          cardio, progressao, periodizacao, observacoes, tmp_path)
+                with open(tmp_path, "rb") as f:
+                    pdf_bytes = f.read()
+                os.unlink(tmp_path)
+            except Exception as exc:
+                st.error(f"Erro ao gerar o PDF: {exc}")
+                return
+
+        st.success("Treino gerado com sucesso!")
+        col_dl_l, col_dl, col_dl_r = st.columns([1, 2, 1])
+        with col_dl:
+            st.download_button(
+                label="📥  Baixar PDF",
+                data=pdf_bytes,
+                file_name=nome_arquivo,
+                mime="application/pdf",
+                use_container_width=True,
+                key="btn_dl_treino",
             )
-            with open(tmp_path, "rb") as f:
-                pdf_bytes = f.read()
-            os.unlink(tmp_path)
-        except Exception as exc:
-            st.error(f"Erro ao gerar o PDF: {exc}")
-            st.stop()
 
-    st.success("Treino gerado com sucesso!")
 
-    col_dl_l, col_dl, col_dl_r = st.columns([1, 2, 1])
-    with col_dl:
-        st.download_button(
-            label="📥  Baixar PDF",
-            data=pdf_bytes,
-            file_name=nome_arquivo,
-            mime="application/pdf",
-            use_container_width=True,
-        )
+# ── Tab: Anamneses Recebidas ──────────────────────────────────────────────────
+
+def _tab_anamneses_recebidas():
+    st.markdown("### Anamneses Recebidas")
+    os.makedirs("dados_clientes", exist_ok=True)
+    arquivos = sorted(glob.glob("dados_clientes/anamnese_*.json"), reverse=True)
+
+    if not arquivos:
+        st.info("Nenhuma anamnese recebida ainda. As fichas aparecerão aqui assim que os alunos as enviarem.")
+        return
+
+    clientes = []
+    for arq in arquivos:
+        try:
+            with open(arq, encoding="utf-8") as f:
+                dados = json.load(f)
+            clientes.append({
+                "arquivo":    arq,
+                "dados":      dados,
+                "nome":       dados.get("dados_pessoais", {}).get("nome", arq),
+                "data_envio": dados.get("data_envio", "—"),
+            })
+        except Exception:
+            continue
+
+    if not clientes:
+        st.warning("Nenhum arquivo de anamnese pôde ser lido.")
+        return
+
+    opcoes = [f"{c['nome']}  —  {c['data_envio']}" for c in clientes]
+    idx = st.selectbox("Selecionar anamnese", range(len(opcoes)),
+                       format_func=lambda i: opcoes[i], key="sel_anamnese")
+
+    st.divider()
+
+    cliente_sel = clientes[idx]
+    dados_sel   = cliente_sel["dados"]
+
+    col_info, col_pdf = st.columns([3, 1])
+    with col_info:
+        st.markdown(f"**{cliente_sel['nome']}** — enviada em {cliente_sel['data_envio']}")
+    with col_pdf:
+        try:
+            pdf_bytes = gerar_pdf_anamnese(dados_sel)
+            st.download_button(
+                "📄  Exportar PDF",
+                data=pdf_bytes,
+                file_name=f"anamnese_{_slug(cliente_sel['nome'])}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"btn_pdf_{idx}",
+            )
+        except Exception as e:
+            st.error(f"Erro ao gerar PDF: {e}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    _exibir_anamnese_streamlit(dados_sel)
+
+
+# ── Página: Professora ────────────────────────────────────────────────────────
+
+def _pagina_professora():
+    # Tela de login
+    if not st.session_state.get('autenticado'):
+        st.title("Studio Personal Training")
+        st.markdown("### Acesso Restrito — Área da Professora")
+        st.divider()
+
+        col_l, col_form, col_r = st.columns([1, 2, 1])
+        with col_form:
+            with st.form("login_form"):
+                usuario = st.text_input("Usuário")
+                senha   = st.text_input("Senha", type="password")
+                entrar  = st.form_submit_button("Entrar", use_container_width=True)
+
+            if entrar:
+                if usuario == "admin" and senha == "studio2026":
+                    st.session_state['autenticado'] = True
+                    st.rerun()
+                else:
+                    st.error("Usuário ou senha incorretos.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("← Voltar ao início", key="btn_voltar_login",
+                         use_container_width=True):
+                st.session_state['area'] = None
+                st.rerun()
+        return
+
+    # Cabeçalho da área autenticada
+    col_titulo, col_sair = st.columns([9, 1])
+    with col_titulo:
+        st.title("Studio Personal Training")
+        st.markdown('<p class="subtitulo">Área da Professora</p>', unsafe_allow_html=True)
+    with col_sair:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        if st.button("Sair", key="btn_sair"):
+            st.session_state['autenticado'] = False
+            st.session_state['area']        = None
+            st.rerun()
+
+    st.divider()
+
+    tab_treino, tab_anamneses = st.tabs(["🏋️  Gerador de Treino", "📋  Anamneses Recebidas"])
+
+    with tab_treino:
+        _tab_gerador_treino()
+
+    with tab_anamneses:
+        _tab_anamneses_recebidas()
+
+
+# ── Roteamento principal ──────────────────────────────────────────────────────
+
+if 'area' not in st.session_state:
+    st.session_state['area'] = None
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+
+_area = st.session_state['area']
+if _area is None:
+    _pagina_home()
+elif _area == 'cliente':
+    _pagina_anamnese()
+else:
+    _pagina_professora()
