@@ -1133,7 +1133,8 @@ def _pagina_portal_cliente():
                 st.markdown(f"**Meta definida pela professora:** {meta_p} kg")
             fig = _chart_peso(pesos, meta=meta_p)
             if fig:
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True,
+                                key=f"portal_peso_tab_{slug}")
             else:
                 for p in reversed(pesos[-10:]):
                     st.markdown(f"- {p['data']}: **{p['peso']} kg**")
@@ -1175,13 +1176,15 @@ def _pagina_portal_cliente():
 
             fig_p = _chart_peso(todos_pesos, meta=meta_p)
             if fig_p:
-                st.plotly_chart(fig_p, use_container_width=True)
+                st.plotly_chart(fig_p, use_container_width=True,
+                                key=f"portal_prog_peso_{slug}")
 
         if len(medidas_c) >= 2:
             st.markdown("**Evolução das Medidas**")
             fig_m = _chart_medidas(medidas_c)
             if fig_m:
-                st.plotly_chart(fig_m, use_container_width=True)
+                st.plotly_chart(fig_m, use_container_width=True,
+                                key=f"portal_prog_med_{slug}")
 
 
 # ── Tab: Gerador de Treino ────────────────────────────────────────────────────
@@ -1875,9 +1878,10 @@ def _perfil_cliente_prof(slug):
                 row = {}
                 for k, l in CAMPOS_TAB:
                     v = m.get(k)
-                    row[l] = f"{float(v):.1f}" if v not in (None, "") else "—"
                     if k == "data":
                         row[l] = str(v) if v else "—"
+                    else:
+                        row[l] = f"{float(v):.1f}" if v not in (None, "") else "—"
                 rows_tab.append(row)
             st.dataframe(rows_tab, use_container_width=True)
 
@@ -1887,11 +1891,13 @@ def _perfil_cliente_prof(slug):
                 fig_p = _chart_peso(med_peso,
                                     meta=float(nova_meta) if nova_meta > 0 else None)
                 if fig_p:
-                    st.plotly_chart(fig_p, use_container_width=True)
+                    st.plotly_chart(fig_p, use_container_width=True,
+                                    key=f"prof_med_peso_{slug}")
             if len(medidas) >= 2:
                 fig_m = _chart_medidas(medidas)
                 if fig_m:
-                    st.plotly_chart(fig_m, use_container_width=True)
+                    st.plotly_chart(fig_m, use_container_width=True,
+                                    key=f"prof_med_med_{slug}")
 
     # ── Aba: Progresso ────────────────────────────────────────────────────────
     with tab_prog:
@@ -1961,12 +1967,14 @@ def _perfil_cliente_prof(slug):
         if todos_pesos:
             fig_p = _chart_peso(todos_pesos, meta=meta_p)
             if fig_p:
-                st.plotly_chart(fig_p, use_container_width=True)
+                st.plotly_chart(fig_p, use_container_width=True,
+                                key=f"prof_prog_peso_{slug}")
 
         if len(medidas) >= 2:
             fig_m = _chart_medidas(medidas)
             if fig_m:
-                st.plotly_chart(fig_m, use_container_width=True)
+                st.plotly_chart(fig_m, use_container_width=True,
+                                key=f"prof_prog_med_{slug}")
 
         st.divider()
         if st.button("📄  Gerar PDF de Progresso", key=f"btn_pdf_prog_{slug}",
