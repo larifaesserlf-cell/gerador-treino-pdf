@@ -16,6 +16,7 @@ from exercicios import (
 )
 from gerar_pdf import gerar_pdf
 from gerar_pdf_anamnese import gerar_pdf_anamnese
+from gerar_pdf_postural import gerar_pdf_postural
 
 
 # ── Configuração da página ─────────────────────────────────────────────────────
@@ -168,6 +169,46 @@ def _enviar_email(nome, dados):
         return False, str(e)
 
 
+def _encontrar_foto(pasta, view_key):
+    for ext in ['jpg', 'jpeg', 'png', 'JPG', 'JPEG', 'PNG']:
+        p = os.path.join(pasta, f"{view_key}.{ext}")
+        if os.path.exists(p):
+            return p
+    return None
+
+
+def _enviar_email_fotos(nome, data_avaliacao, pasta, n_fotos):
+    try:
+        from config import EMAIL_REMETENTE, EMAIL_SENHA, EMAIL_DESTINATARIO
+        if not EMAIL_REMETENTE or not EMAIL_SENHA:
+            return False, "nao_configurado"
+        corpo = (
+            f"Fotos de avaliação postural recebidas.\n\n"
+            f"Cliente: {nome}\n"
+            f"Data: {data_avaliacao}\n"
+            f"Fotos enviadas: {n_fotos}/6\n"
+        )
+        msg = MIMEMultipart()
+        msg['From']    = EMAIL_REMETENTE
+        msg['To']      = EMAIL_DESTINATARIO
+        msg['Subject'] = f"Fotos Posturais — {nome}"
+        msg.attach(MIMEText(corpo, 'plain', 'utf-8'))
+        with smtplib.SMTP('smtp.gmail.com', 587) as srv:
+            srv.starttls()
+            srv.login(EMAIL_REMETENTE, EMAIL_SENHA)
+            srv.sendmail(EMAIL_REMETENTE, EMAIL_DESTINATARIO, msg.as_string())
+        return True, "ok"
+    except Exception as e:
+        return False, str(e)
+
+
+def _idx_default(options, value):
+    try:
+        return options.index(value)
+    except ValueError:
+        return 0
+
+
 # ── Constantes ────────────────────────────────────────────────────────────────
 
 PARQ_PERGUNTAS = [
@@ -220,6 +261,21 @@ NIVEIS = {
 }
 
 EQUIPAMENTOS_OPCOES = ["Academia completa", "Halteres", "Elásticos", "Peso corporal", "Outro"]
+
+VISTAS_POSTURAL = [
+    {"key": "frente",       "label": "Frente",
+     "instrucao": "Em pé, braços ao lado do corpo, olhando para frente"},
+    {"key": "costas",       "label": "Costas",
+     "instrucao": "Em pé, braços ao lado do corpo, de costas para a câmera"},
+    {"key": "lat_direita",  "label": "Lateral Direita",
+     "instrucao": "Em pé, lado direito para a câmera, braços ao lado do corpo"},
+    {"key": "lat_esquerda", "label": "Lateral Esquerda",
+     "instrucao": "Em pé, lado esquerdo para a câmera, braços ao lado do corpo"},
+    {"key": "agachamento",  "label": "Agachamento",
+     "instrucao": "Agachamento completo de frente, calcanhares no chão se possível"},
+    {"key": "core",         "label": "Core / Prancha",
+     "instrucao": "Posição de prancha frontal, corpo reto da cabeça aos calcanhares"},
+]
 
 
 # ── Exibição de anamnese (área da professora) ─────────────────────────────────
@@ -335,32 +391,49 @@ def _pagina_home():
 
     st.divider()
 
-    col_l, col_aluno, col_meio, col_prof, col_r = st.columns([0.5, 3, 0.5, 3, 0.5])
+    col1, col2, col3 = st.columns(3)
 
-    with col_aluno:
+    with col1:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.2rem;
-                    text-align:center; background:#f8f9fa; min-height:190px;">
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
+                    text-align:center; background:#f8f9fa; min-height:195px;">
             <div style="font-size:2.8rem; margin-bottom:0.4rem;">🧑‍🤸</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem;">Sou Aluno</h3>
-            <p style="color:#666; font-size:0.88rem; margin:0; line-height:1.5;">
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Ficha de Anamnese</h3>
+            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
                 Preencha sua ficha de anamnese para iniciar seu programa de treino personalizado.
             </p>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Acessar Área do Aluno", key="btn_home_aluno",
+        if st.button("Preencher Anamnese", key="btn_home_aluno",
                      use_container_width=True, type="primary"):
             st.session_state['area'] = 'cliente'
             st.rerun()
 
-    with col_prof:
+    with col2:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.2rem;
-                    text-align:center; background:#f8f9fa; min-height:190px;">
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
+                    text-align:center; background:#f8f9fa; min-height:195px;">
+            <div style="font-size:2.8rem; margin-bottom:0.4rem;">📸</div>
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Avaliação Postural</h3>
+            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
+                Envie suas fotos para avaliação postural completa com análise profissional.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Enviar Fotos", key="btn_home_postural",
+                     use_container_width=True, type="primary"):
+            st.session_state['area'] = 'postural'
+            st.rerun()
+
+    with col3:
+        st.markdown("""
+        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
+                    text-align:center; background:#f8f9fa; min-height:195px;">
             <div style="font-size:2.8rem; margin-bottom:0.4rem;">👩‍💼</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.15rem;">Acesso Professora</h3>
-            <p style="color:#666; font-size:0.88rem; margin:0; line-height:1.5;">
+            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Acesso Professora</h3>
+            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
                 Gerencie fichas de anamnese e gere planos de treino personalizados.
             </p>
         </div>
@@ -680,6 +753,107 @@ def _pagina_anamnese():
             st.rerun()
 
 
+# ── Página: Upload de Fotos Posturais (cliente) ──────────────────────────────
+
+def _pagina_upload_postural():
+    if st.button("← Início", key="btn_voltar_postural"):
+        st.session_state['area'] = None
+        st.session_state.pop('postural_confirmada', None)
+        st.rerun()
+
+    if st.session_state.get('postural_confirmada'):
+        st.balloons()
+        st.success("✅ Fotos enviadas com sucesso! Em breve a professora entrará em contato.")
+        st.info("Você pode fechar esta página ou clicar em '← Início' para voltar.")
+        return
+
+    st.title("Avaliação Postural")
+    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+    st.divider()
+
+    st.markdown("### Seus dados")
+    col_nome, col_data = st.columns(2)
+    with col_nome:
+        nome_cl = st.text_input("Nome completo *", key="post_nome")
+    with col_data:
+        data_aval = st.date_input("Data da avaliação",
+                                   value=date.today(), format="DD/MM/YYYY", key="post_data")
+
+    st.divider()
+    st.markdown("### Envio das fotos")
+    st.info(
+        "Tire as fotos com roupas justas ou maiô/bermuda, em um local bem iluminado. "
+        "Fique em posição ereta e relaxada (exceto onde indicado abaixo)."
+    )
+    st.markdown(
+        "> 💡 **Como tirar as fotos sozinho:**\n"
+        "> 1. Apoie o celular em uma superfície firme (cadeira, mesa, prateleira) "
+        "na altura do quadril e use o **temporizador** da câmera\n"
+        "> 2. Peça ajuda para alguém fotografar\n"
+        "> 3. **Grave um vídeo** girando devagar nas posições indicadas e tire print "
+        "dos melhores frames — essa é a forma mais prática!"
+    )
+
+    uploads = {}
+    for vista in VISTAS_POSTURAL:
+        with st.expander(f"📷  {vista['label']}", expanded=True):
+            st.caption(f"Instrução: {vista['instrucao']}")
+            f = st.file_uploader(
+                f"Foto — {vista['label']}",
+                type=["jpg", "jpeg", "png"],
+                key=f"post_foto_{vista['key']}",
+                label_visibility="collapsed",
+            )
+            uploads[vista['key']] = f
+
+    st.divider()
+    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    with col_btn:
+        enviar = st.button("📨  Enviar Fotos", use_container_width=True,
+                           type="primary", key="btn_enviar_fotos")
+
+    if enviar:
+        erros = []
+        if not nome_cl.strip():
+            erros.append("Informe o nome completo.")
+        n_fotos = sum(1 for f in uploads.values() if f is not None)
+        if n_fotos == 0:
+            erros.append("Envie pelo menos uma foto.")
+        if erros:
+            for e in erros:
+                st.error(e)
+        else:
+            os.makedirs("dados_clientes", exist_ok=True)
+            slug = _slug(nome_cl.strip())
+            ts    = data_aval.strftime("%Y-%m-%d")
+            pasta = f"dados_clientes/fotos_{slug}_{ts}"
+            os.makedirs(pasta, exist_ok=True)
+
+            fotos_salvas = []
+            for vista in VISTAS_POSTURAL:
+                f = uploads[vista['key']]
+                if f is not None:
+                    ext = f.name.rsplit(".", 1)[-1].lower() if "." in f.name else "jpg"
+                    save_path = os.path.join(pasta, f"{vista['key']}.{ext}")
+                    with open(save_path, "wb") as out:
+                        out.write(f.getbuffer())
+                    fotos_salvas.append(vista['key'])
+
+            meta = {
+                "nome":           nome_cl.strip(),
+                "data_avaliacao": data_aval.strftime("%d/%m/%Y"),
+                "fotos_enviadas": fotos_salvas,
+                "timestamp":      datetime.now().isoformat(),
+            }
+            with open(os.path.join(pasta, "metadata.json"), "w", encoding="utf-8") as f:
+                json.dump(meta, f, ensure_ascii=False, indent=2)
+
+            _enviar_email_fotos(nome_cl.strip(), data_aval.strftime("%d/%m/%Y"),
+                                pasta, len(fotos_salvas))
+            st.session_state['postural_confirmada'] = True
+            st.rerun()
+
+
 # ── Tab: Gerador de Treino ────────────────────────────────────────────────────
 
 def _tab_gerador_treino():
@@ -885,6 +1059,328 @@ def _tab_anamneses_recebidas():
     _exibir_anamnese_streamlit(dados_sel)
 
 
+# ── Tab: Avaliação Postural (professora) ─────────────────────────────────────
+
+def _tab_avaliacao_postural():
+    st.markdown("### Avaliação Postural")
+    os.makedirs("dados_clientes", exist_ok=True)
+
+    pastas = sorted(
+        [p for p in glob.glob("dados_clientes/fotos_*") if os.path.isdir(p)],
+        reverse=True,
+    )
+
+    if not pastas:
+        st.info("Nenhuma pasta de fotos recebida ainda.")
+        return
+
+    clientes_post = []
+    for pasta in pastas:
+        meta_path = os.path.join(pasta, "metadata.json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, encoding="utf-8") as f:
+                    meta = json.load(f)
+            except Exception:
+                meta = {}
+        else:
+            meta = {}
+        clientes_post.append({
+            "pasta": pasta,
+            "nome":  meta.get("nome", os.path.basename(pasta)),
+            "data":  meta.get("data_avaliacao", "—"),
+            "meta":  meta,
+        })
+
+    opcoes = [f"{c['nome']}  —  {c['data']}" for c in clientes_post]
+    idx = st.selectbox("Selecionar cliente", range(len(opcoes)),
+                       format_func=lambda i: opcoes[i], key="sel_postural")
+
+    cliente_sel  = clientes_post[idx]
+    pasta_sel    = cliente_sel["pasta"]
+    nome_cliente = cliente_sel["nome"]
+    pasta_base   = os.path.basename(pasta_sel)
+
+    slug_c = _slug(nome_cliente)
+    avals_existentes = sorted(
+        glob.glob(f"dados_clientes/avaliacao_{slug_c}_*.json"), reverse=True
+    )
+    prev = {}
+    if avals_existentes:
+        try:
+            with open(avals_existentes[0], encoding="utf-8") as f:
+                prev = json.load(f)
+        except Exception:
+            prev = {}
+
+    st.divider()
+    tab_fotos, tab_kendall = st.tabs(["📸  Fotos", "📋  Ficha de Kendall"])
+
+    obs_fotos = {}
+
+    with tab_fotos:
+        foto_subtabs = st.tabs([v['label'] for v in VISTAS_POSTURAL])
+        for ftab, vista in zip(foto_subtabs, VISTAS_POSTURAL):
+            with ftab:
+                vkey      = vista['key']
+                foto_orig = _encontrar_foto(pasta_sel, vkey)
+
+                if foto_orig and os.path.exists(foto_orig):
+                    st.image(foto_orig, caption=vista['label'], use_container_width=True)
+                    with open(foto_orig, "rb") as _f:
+                        st.download_button(
+                            "⬇️  Baixar foto original",
+                            data=_f.read(),
+                            file_name=os.path.basename(foto_orig),
+                            mime="image/jpeg",
+                            key=f"dl_foto_{vkey}_{pasta_base}",
+                        )
+                else:
+                    st.info(f"Foto '{vista['label']}' não foi enviada pelo cliente.")
+
+                obs_default = prev.get("observacoes_fotos", {}).get(vkey, "")
+                obs_fotos[vkey] = st.text_area(
+                    "Observações sobre esta vista",
+                    value=obs_default,
+                    height=70,
+                    key=f"obs_{vkey}_{pasta_base}",
+                )
+
+    vista_ant    = {}
+    vista_post_k = {}
+    vista_lat    = {}
+    aval_func    = {}
+    conclusao    = {}
+
+    with tab_kendall:
+        st.markdown("#### Vista Anterior (Frente)")
+        pva = prev.get("vista_anterior", {})
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            va_cab = st.selectbox("Alinhamento da cabeça",
+                ["Centralizada", "Desvio para direita", "Desvio para esquerda"],
+                index=_idx_default(["Centralizada","Desvio para direita","Desvio para esquerda"],
+                                   pva.get("alinhamento_cabeca","Centralizada")),
+                key=f"va_cab_{pasta_base}")
+            va_omb = st.selectbox("Ombros",
+                ["Nivelados", "Ombro direito elevado", "Ombro esquerdo elevado"],
+                index=_idx_default(["Nivelados","Ombro direito elevado","Ombro esquerdo elevado"],
+                                   pva.get("ombros","Nivelados")),
+                key=f"va_omb_{pasta_base}")
+        with c2:
+            va_tal = st.selectbox("Triângulo de Tales",
+                ["Simétrico", "Assimétrico direita", "Assimétrico esquerda"],
+                index=_idx_default(["Simétrico","Assimétrico direita","Assimétrico esquerda"],
+                                   pva.get("triangulo_tales","Simétrico")),
+                key=f"va_tal_{pasta_base}")
+            va_cri = st.selectbox("Cristas ilíacas",
+                ["Niveladas", "Direita elevada", "Esquerda elevada"],
+                index=_idx_default(["Niveladas","Direita elevada","Esquerda elevada"],
+                                   pva.get("cristas_iliacas","Niveladas")),
+                key=f"va_cri_{pasta_base}")
+        with c3:
+            va_joe = st.selectbox("Joelhos",
+                ["Neutro","Valgo bilateral","Varo bilateral","Valgo D / Varo E","Varo D / Valgo E"],
+                index=_idx_default(["Neutro","Valgo bilateral","Varo bilateral","Valgo D / Varo E","Varo D / Valgo E"],
+                                   pva.get("joelhos","Neutro")),
+                key=f"va_joe_{pasta_base}")
+            va_pes = st.selectbox("Pés",
+                ["Neutro","Pronado bilateral","Supinado bilateral","Misto"],
+                index=_idx_default(["Neutro","Pronado bilateral","Supinado bilateral","Misto"],
+                                   pva.get("pes","Neutro")),
+                key=f"va_pes_{pasta_base}")
+        va_obs = st.text_area("Observações (Vista Anterior)", value=pva.get("obs",""),
+                              height=70, key=f"va_obs_{pasta_base}")
+        vista_ant = {
+            "alinhamento_cabeca": va_cab, "ombros": va_omb, "triangulo_tales": va_tal,
+            "cristas_iliacas": va_cri, "joelhos": va_joe, "pes": va_pes, "obs": va_obs,
+        }
+
+        st.divider()
+        st.markdown("#### Vista Posterior (Costas)")
+        pvp = prev.get("vista_posterior", {})
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            vp_col = st.selectbox("Alinhamento da coluna",
+                ["Retilínea","Escoliose funcional","Escoliose estrutural","Desvio direita","Desvio esquerda"],
+                index=_idx_default(["Retilínea","Escoliose funcional","Escoliose estrutural","Desvio direita","Desvio esquerda"],
+                                   pvp.get("coluna","Retilínea")),
+                key=f"vp_col_{pasta_base}")
+            vp_esc = st.selectbox("Escápulas",
+                ["Simétricas","Alada direita","Alada esquerda","Elevada direita","Elevada esquerda"],
+                index=_idx_default(["Simétricas","Alada direita","Alada esquerda","Elevada direita","Elevada esquerda"],
+                                   pvp.get("escapulas","Simétricas")),
+                key=f"vp_esc_{pasta_base}")
+        with c2:
+            vp_glu = st.selectbox("Glúteos",
+                ["Simétricos","Assimétricos"],
+                index=_idx_default(["Simétricos","Assimétricos"], pvp.get("gluteos","Simétricos")),
+                key=f"vp_glu_{pasta_base}")
+            vp_pop = st.selectbox("Dobras poplíteas",
+                ["Simétricas","Assimétricas"],
+                index=_idx_default(["Simétricas","Assimétricas"], pvp.get("dobras_popliteas","Simétricas")),
+                key=f"vp_pop_{pasta_base}")
+        with c3:
+            vp_cal = st.selectbox("Calcanhares",
+                ["Neutro","Valgo bilateral","Varo bilateral","Valgo D / Varo E","Varo D / Valgo E"],
+                index=_idx_default(["Neutro","Valgo bilateral","Varo bilateral","Valgo D / Varo E","Varo D / Valgo E"],
+                                   pvp.get("calcanhares","Neutro")),
+                key=f"vp_cal_{pasta_base}")
+        vp_obs = st.text_area("Observações (Vista Posterior)", value=pvp.get("obs",""),
+                              height=70, key=f"vp_obs_{pasta_base}")
+        vista_post_k = {
+            "coluna": vp_col, "escapulas": vp_esc, "gluteos": vp_glu,
+            "dobras_popliteas": vp_pop, "calcanhares": vp_cal, "obs": vp_obs,
+        }
+
+        st.divider()
+        st.markdown("#### Vista Lateral")
+        pvl = prev.get("vista_lateral", {})
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            vl_cab = st.selectbox("Posição da cabeça",
+                ["Neutra","Anteriorizada","Posteriorizada"],
+                index=_idx_default(["Neutra","Anteriorizada","Posteriorizada"],
+                                   pvl.get("cabeca","Neutra")),
+                key=f"vl_cab_{pasta_base}")
+            vl_cer = st.selectbox("Coluna cervical",
+                ["Normal","Hiperlordose","Retificada"],
+                index=_idx_default(["Normal","Hiperlordose","Retificada"],
+                                   pvl.get("cervical","Normal")),
+                key=f"vl_cer_{pasta_base}")
+            vl_tor = st.selectbox("Coluna torácica",
+                ["Normal","Hipercifose","Retificada"],
+                index=_idx_default(["Normal","Hipercifose","Retificada"],
+                                   pvl.get("toracica","Normal")),
+                key=f"vl_tor_{pasta_base}")
+        with c2:
+            vl_lom = st.selectbox("Coluna lombar",
+                ["Normal","Hiperlordose","Retificada","Escoliose"],
+                index=_idx_default(["Normal","Hiperlordose","Retificada","Escoliose"],
+                                   pvl.get("lombar","Normal")),
+                key=f"vl_lom_{pasta_base}")
+            vl_pel = st.selectbox("Pelve",
+                ["Neutra","Anteversão","Retroversão"],
+                index=_idx_default(["Neutra","Anteversão","Retroversão"],
+                                   pvl.get("pelve","Neutra")),
+                key=f"vl_pel_{pasta_base}")
+        with c3:
+            vl_joe = st.selectbox("Joelho (lateral)",
+                ["Neutro","Hiperextensão","Semiflexão"],
+                index=_idx_default(["Neutro","Hiperextensão","Semiflexão"],
+                                   pvl.get("joelho_lat","Neutro")),
+                key=f"vl_joe_{pasta_base}")
+        vl_obs = st.text_area("Observações (Vista Lateral)", value=pvl.get("obs",""),
+                              height=70, key=f"vl_obs_{pasta_base}")
+        vista_lat = {
+            "cabeca": vl_cab, "cervical": vl_cer, "toracica": vl_tor,
+            "lombar": vl_lom, "pelve": vl_pel, "joelho_lat": vl_joe, "obs": vl_obs,
+        }
+
+        st.divider()
+        st.markdown("#### Avaliação Funcional")
+        paf = prev.get("avaliacao_funcional", {})
+        af_aga  = st.text_area("Agachamento — observações", value=paf.get("agachamento",""),
+                               height=70, key=f"af_aga_{pasta_base}")
+        af_core = st.text_area("Core / Prancha — observações", value=paf.get("core",""),
+                               height=70, key=f"af_core_{pasta_base}")
+        aval_func = {"agachamento": af_aga, "core": af_core}
+
+        st.divider()
+        st.markdown("#### Conclusão e Recomendações")
+        pconc = prev.get("conclusao", {})
+        c1, c2 = st.columns(2)
+        with c1:
+            conc_alt = st.text_area("Principais alterações encontradas",
+                                    value=pconc.get("principais_alteracoes",""),
+                                    height=90, key=f"conc_alt_{pasta_base}")
+            conc_enc = st.text_area("Músculos encurtados identificados",
+                                    value=pconc.get("musculos_encurtados",""),
+                                    height=90, key=f"conc_enc_{pasta_base}")
+            conc_fra = st.text_area("Músculos alongados/fracos identificados",
+                                    value=pconc.get("musculos_fracos",""),
+                                    height=90, key=f"conc_fra_{pasta_base}")
+        with c2:
+            conc_exe = st.text_area("Exercícios corretivos recomendados",
+                                    value=pconc.get("exercicios_corretivos",""),
+                                    height=90, key=f"conc_exe_{pasta_base}")
+            conc_obs = st.text_area("Observações gerais",
+                                    value=pconc.get("obs_gerais",""),
+                                    height=90, key=f"conc_obs_{pasta_base}")
+
+        prox_default = None
+        if pconc.get("proxima_reavaliacao"):
+            try:
+                prox_default = datetime.strptime(
+                    pconc["proxima_reavaliacao"], "%d/%m/%Y").date()
+            except Exception:
+                pass
+        prox_aval = st.date_input("Próxima reavaliação recomendada", value=prox_default,
+                                  format="DD/MM/YYYY", key=f"conc_prox_{pasta_base}")
+        conclusao = {
+            "principais_alteracoes": conc_alt,
+            "musculos_encurtados":   conc_enc,
+            "musculos_fracos":       conc_fra,
+            "exercicios_corretivos": conc_exe,
+            "obs_gerais":            conc_obs,
+            "proxima_reavaliacao":   prox_aval.strftime("%d/%m/%Y") if prox_aval else "",
+        }
+
+    # ── Botões de ação ────────────────────────────────────────────────────────
+    st.divider()
+    col_sal, col_pdf = st.columns(2)
+
+    def _montar_dados_aval():
+        fotos_info = {}
+        for v in VISTAS_POSTURAL:
+            ep = os.path.join(pasta_sel, f"editada_{v['key']}.png")
+            fotos_info[v['key']] = {
+                "original": _encontrar_foto(pasta_sel, v['key']),
+                "editada":  ep if os.path.exists(ep) else None,
+            }
+        return {
+            "cliente":             nome_cliente,
+            "data_avaliacao":      cliente_sel["data"],
+            "pasta_fotos":         pasta_sel,
+            "fotos":               fotos_info,
+            "observacoes_fotos":   obs_fotos,
+            "vista_anterior":      vista_ant,
+            "vista_posterior":     vista_post_k,
+            "vista_lateral":       vista_lat,
+            "avaliacao_funcional": aval_func,
+            "conclusao":           conclusao,
+            "data_geracao":        datetime.now().strftime("%d/%m/%Y %H:%M"),
+        }
+
+    with col_sal:
+        if st.button("💾  Salvar Avaliação", use_container_width=True,
+                     type="primary", key=f"btn_salvar_{pasta_base}"):
+            dados_aval = _montar_dados_aval()
+            ts_aval    = datetime.now().strftime("%Y-%m-%d")
+            arq_aval   = f"dados_clientes/avaliacao_{slug_c}_{ts_aval}.json"
+            with open(arq_aval, "w", encoding="utf-8") as f:
+                json.dump(dados_aval, f, ensure_ascii=False, indent=2)
+            st.success("✅ Avaliação salva com sucesso!")
+
+    with col_pdf:
+        if st.button("📄  Gerar PDF da Avaliação", use_container_width=True,
+                     key=f"btn_pdf_{pasta_base}"):
+            dados_aval = _montar_dados_aval()
+            try:
+                with st.spinner("Gerando PDF..."):
+                    pdf_bytes = gerar_pdf_postural(dados_aval)
+                st.download_button(
+                    "📥  Baixar PDF",
+                    data=pdf_bytes,
+                    file_name=f"avaliacao_postural_{slug_c}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"dl_pdf_{pasta_base}",
+                )
+            except Exception as e:
+                st.error(f"Erro ao gerar PDF: {e}")
+
+
 # ── Página: Professora ────────────────────────────────────────────────────────
 
 def _pagina_professora():
@@ -929,13 +1425,20 @@ def _pagina_professora():
 
     st.divider()
 
-    tab_treino, tab_anamneses = st.tabs(["🏋️  Gerador de Treino", "📋  Anamneses Recebidas"])
+    tab_treino, tab_anamneses, tab_postural = st.tabs([
+        "🏋️  Gerador de Treino",
+        "📋  Anamneses Recebidas",
+        "📸  Avaliação Postural",
+    ])
 
     with tab_treino:
         _tab_gerador_treino()
 
     with tab_anamneses:
         _tab_anamneses_recebidas()
+
+    with tab_postural:
+        _tab_avaliacao_postural()
 
 
 # ── Roteamento principal ──────────────────────────────────────────────────────
@@ -950,5 +1453,7 @@ if _area is None:
     _pagina_home()
 elif _area == 'cliente':
     _pagina_anamnese()
+elif _area == 'postural':
+    _pagina_upload_postural()
 else:
     _pagina_professora()

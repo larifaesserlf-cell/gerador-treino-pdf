@@ -1,2 +1,4 @@
-streamlit
+﻿streamlit
 reportlab
+Pillow
+numpy

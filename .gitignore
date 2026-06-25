@@ -10,8 +10,8 @@ __pycache__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Dados de clientes (opcional — remova esta linha se quiser versionar as fichas)
-dados_clientes/*.json
+# Dados de clientes — fichas e fotos nunca versionadas
+dados_clientes/
 
 # Ambientes virtuais
 venv/

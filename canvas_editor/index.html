@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f0f2f6;user-select:none}
+#toolbar{display:flex;flex-wrap:wrap;gap:5px;padding:7px 10px;background:#fff;border-bottom:1px solid #e0e0e0;align-items:center}
+.tb{padding:5px 9px;border:1px solid #ccc;background:#fff;border-radius:5px;cursor:pointer;font-size:13px;white-space:nowrap}
+.tb:hover{background:#f5f5f5}
+.tb.on{background:#e3f2fd;border-color:#1976d2;color:#1976d2;font-weight:700}
+.ab{padding:5px 9px;border:1px solid #ccc;background:#fff;border-radius:5px;cursor:pointer;font-size:13px}
+.ab:hover{opacity:.85}
+.save{background:#1976d2;color:#fff;border-color:#1976d2;font-weight:700}
+.clr{background:#c62828;color:#fff;border-color:#c62828}
+.sep{width:1px;height:24px;background:#ddd;margin:0 3px}
+label{font-size:12px;color:#444;display:flex;align-items:center;gap:4px}
+#ci{width:28px;height:26px;padding:1px;border:1px solid #ccc;border-radius:3px;cursor:pointer}
+#si{width:70px;accent-color:#1976d2}
+#sv{min-width:18px;font-size:12px}
+#trow{display:none;padding:5px 10px;background:#fff;border-bottom:1px solid #e0e0e0;gap:6px;align-items:center;flex-wrap:wrap}
+#ti{flex:1;max-width:280px;padding:4px 8px;border:1px solid #ccc;border-radius:4px;font-size:13px}
+#wrap{position:relative;line-height:0;overflow:auto}
+canvas{display:block}
+#dc{position:absolute;top:0;left:0;cursor:crosshair}
+#msg{padding:4px 10px;font-size:12px;color:#1976d2;background:#e3f2fd;display:none;border-top:1px solid #bbdefb}
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button class="tb on" data-t="line"   onclick="setT(this)">/ Linha</button>
+  <button class="tb"    data-t="arrow"  onclick="setT(this)">&#8594; Seta</button>
+  <button class="tb"    data-t="circle" onclick="setT(this)">&#9675; Circulo</button>
+  <button class="tb"    data-t="rect"   onclick="setT(this)">&#9633; Retang.</button>
+  <button class="tb"    data-t="free"   onclick="setT(this)">&#9998; Livre</button>
+  <button class="tb"    data-t="text"   onclick="setT(this)">T Texto</button>
+  <button class="tb"    data-t="eraser" onclick="setT(this)">&#9723; Borracha</button>
+  <div class="sep"></div>
+  <label>Cor<input type="color" id="ci" value="#FF0000" oninput="color=this.value"></label>
+  <label>Esp<input type="range" id="si" min="1" max="30" value="3" oninput="sz=+this.value;document.getElementById('sv').textContent=sz">
+  <span id="sv">3</span></label>
+  <div class="sep"></div>
+  <button class="ab" onclick="undo()">&#8617; Desfazer</button>
+  <button class="ab clr" onclick="clearAll()">&#128465; Limpar</button>
+  <div class="sep"></div>
+  <button class="ab save" onclick="save()">&#128190; Salvar foto editada</button>
+</div>
+<div id="trow" style="display:none">
+  Texto: <input type="text" id="ti" placeholder="Digite e clique na foto...">
+  <small style="color:#888">(clique na posicao desejada na foto)</small>
+</div>
+<div id="wrap">
+  <canvas id="bc"></canvas>
+  <canvas id="dc"
+    onmousedown="md(event)" onmousemove="mm(event)"
+    onmouseup="mu(event)" onmouseleave="mu(event)"
+    ontouchstart="td(event)" ontouchmove="tm(event)" ontouchend="tu(event)"
+  ></canvas>
+</div>
+<div id="msg"></div>
+<script>
+"use strict";
+function stPost(t,d){window.parent.postMessage(Object.assign({type:"streamlit:"+t},d),"*")}
+function stVal(v){stPost("setComponentValue",{value:v,dataType:"json"})}
+function stH(h){stPost("setFrameHeight",{height:h})}
+
+window.addEventListener("message",function(e){
+  if(!e.data||e.data.type!=="streamlit:render")return;
+  var a=e.data.args||{};
+  if(a.image_b64&&a.image_b64!==curB64)loadImg(a.image_b64);
+});
+window.addEventListener("load",function(){
+  stPost("componentReady",{apiVersion:1});
+  setTimeout(function(){stH(document.documentElement.scrollHeight+10)},200);
+});
+
+var bc=document.getElementById("bc"),dc=document.getElementById("dc");
+var bx=bc.getContext("2d"),dx=dc.getContext("2d");
+var bgImg=null,curB64=null,tool="line",color="#FF0000",sz=3;
+var drawing=false,sx=0,sy=0,snaps=[];
+
+function loadImg(b64){
+  curB64=b64;
+  var img=new Image();
+  img.onload=function(){
+    var maxW=Math.min(window.innerWidth-4,700);
+    var sc=img.width>maxW?maxW/img.width:1;
+    var w=Math.round(img.width*sc),h=Math.round(img.height*sc);
+    bc.width=dc.width=w; bc.height=dc.height=h;
+    bx.drawImage(img,0,0,w,h);
+    bgImg=img; snaps=[];
+    setTimeout(function(){stH(document.documentElement.scrollHeight+10)},150);
+  };
+  img.src=b64.startsWith("data:")?b64:"data:image/png;base64,"+b64;
+}
+
+function setT(btn){
+  tool=btn.getAttribute("data-t");
+  document.querySelectorAll(".tb").forEach(function(b){b.classList.remove("on")});
+  btn.classList.add("on");
+  document.getElementById("trow").style.display=tool==="text"?"flex":"none";
+  dc.style.cursor=tool==="eraser"?"cell":(tool==="text"?"text":"crosshair");
+}
+
+function pos(e){
+  var r=dc.getBoundingClientRect();
+  return{x:(e.clientX-r.left)*(dc.width/r.width),y:(e.clientY-r.top)*(dc.height/r.height)};
+}
+
+function md(e){
+  if(e.button!==0)return;
+  if(tool==="text"){doText(pos(e));return}
+  drawing=true;var p=pos(e);sx=p.x;sy=p.y;
+  if(tool==="free"||tool==="eraser"){dx.beginPath();dx.moveTo(sx,sy)}
+}
+function mm(e){
+  if(!drawing)return;
+  var p=pos(e);
+  if(tool==="free"||tool==="eraser"){
+    dx.lineWidth=tool==="eraser"?sz*6:sz;
+    dx.strokeStyle=color;
+    dx.globalCompositeOperation=tool==="eraser"?"destination-out":"source-over";
+    dx.lineCap="round";dx.lineJoin="round";
+    dx.lineTo(p.x,p.y);dx.stroke();
+  }else{
+    restoreLast();drawShape(dx,tool,sx,sy,p.x,p.y);
+  }
+}
+function mu(e){
+  if(!drawing)return;drawing=false;
+  dx.globalCompositeOperation="source-over";pushSnap();
+}
+function td(e){e.preventDefault();md(e.touches[0])}
+function tm(e){e.preventDefault();mm(e.touches[0])}
+function tu(e){e.preventDefault();mu(e.changedTouches[0])}
+
+function drawShape(ctx,t,x1,y1,x2,y2){
+  ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=sz;
+  ctx.lineCap="round";ctx.lineJoin="round";ctx.beginPath();
+  if(t==="line"){ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke()}
+  else if(t==="arrow"){
+    var ang=Math.atan2(y2-y1,x2-x1),hw=Math.max(sz*4,14);
+    ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-hw*Math.cos(ang-Math.PI/7),y2-hw*Math.sin(ang-Math.PI/7));
+    ctx.lineTo(x2-hw*Math.cos(ang+Math.PI/7),y2-hw*Math.sin(ang+Math.PI/7));
+    ctx.closePath();ctx.fill();
+  }else if(t==="circle"){
+    var rx=(x2-x1)/2,ry=(y2-y1)/2;
+    ctx.ellipse(x1+rx,y1+ry,Math.abs(rx),Math.abs(ry),0,0,2*Math.PI);ctx.stroke();
+  }else if(t==="rect"){ctx.strokeRect(x1,y1,x2-x1,y2-y1)}
+}
+
+function doText(p){
+  var txt=document.getElementById("ti").value.trim();
+  if(!txt){flash("Digite o texto no campo acima e depois clique na foto.");return}
+  dx.font="bold "+Math.max(sz*6,16)+"px sans-serif";
+  dx.fillStyle=color;dx.globalCompositeOperation="source-over";
+  dx.fillText(txt,p.x,p.y);pushSnap();
+}
+
+function pushSnap(){
+  snaps.push(dx.getImageData(0,0,dc.width,dc.height));
+  if(snaps.length>60)snaps.shift();
+}
+function restoreLast(){
+  if(snaps.length)dx.putImageData(snaps[snaps.length-1],0,0);
+  else dx.clearRect(0,0,dc.width,dc.height);
+}
+function undo(){
+  if(!snaps.length)return;
+  snaps.pop();restoreLast();
+}
+function clearAll(){snaps=[];dx.clearRect(0,0,dc.width,dc.height)}
+
+function save(){
+  if(!bgImg){flash("Nenhuma foto carregada ainda.");return}
+  var out=document.createElement("canvas");
+  out.width=bc.width;out.height=bc.height;
+  var ctx=out.getContext("2d");
+  ctx.drawImage(bgImg,0,0,bc.width,bc.height);
+  ctx.drawImage(dc,0,0);
+  stVal({image_b64:out.toDataURL("image/png")});
+  flash("Enviando para o servidor...");
+}
+
+function flash(msg){
+  var el=document.getElementById("msg");
+  el.textContent=msg;el.style.display="block";
+  setTimeout(function(){el.style.display="none"},3000);
+}
+</script>
+</body>
+</html>
