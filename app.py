@@ -552,9 +552,9 @@ def _exibir_anamnese_streamlit(dados):
 
 def _pagina_home():
     st.markdown("""
-    <div style="text-align:center; padding: 2.5rem 0 1.5rem 0;">
-        <div style="font-size: 3rem;">🏋️</div>
-        <h1 style="font-size: 2rem; font-weight: 700; margin: 0.3rem 0;">Studio Personal Training</h1>
+    <div style="text-align:center; padding: 3rem 0 2rem 0;">
+        <div style="font-size: 3.5rem;">🏋️</div>
+        <h1 style="font-size: 2.2rem; font-weight: 700; margin: 0.4rem 0;">Studio Personal Training</h1>
         <p style="color: #666; font-size: 1.05rem; margin: 0;">Como você deseja continuar?</p>
     </div>
     """, unsafe_allow_html=True)
@@ -565,71 +565,35 @@ def _pagina_home():
 
     with col1:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
-                    text-align:center; background:#f8f9fa; min-height:195px;">
-            <div style="font-size:2.8rem; margin-bottom:0.4rem;">🧑‍🤸</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Ficha de Anamnese</h3>
-            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
-                Preencha sua ficha de anamnese para iniciar seu programa de treino personalizado.
+        <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
+                    text-align:center; background:#f8f9fa; min-height:220px;">
+            <div style="font-size:3.2rem; margin-bottom:0.6rem;">🧑‍🤸</div>
+            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Sou Aluno</h3>
+            <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
+                Preencha sua anamnese, envie fotos posturais e acompanhe seu progresso.
             </p>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Preencher Anamnese", key="btn_home_aluno",
+        if st.button("Sou Aluno", key="btn_home_aluno",
                      use_container_width=True, type="primary"):
-            st.session_state['area'] = 'cliente'
+            st.session_state['area'] = 'aluno'
             st.rerun()
 
     with col2:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
-                    text-align:center; background:#f8f9fa; min-height:195px;">
-            <div style="font-size:2.8rem; margin-bottom:0.4rem;">📸</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Avaliação Postural</h3>
-            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
-                Envie suas fotos para avaliação postural completa com análise profissional.
+        <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
+                    text-align:center; background:#f8f9fa; min-height:220px;">
+            <div style="font-size:3.2rem; margin-bottom:0.6rem;">👩‍💼</div>
+            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Acesso Professora</h3>
+            <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
+                Gerencie clientes, anamneses, avaliações posturais e gere treinos.
             </p>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Enviar Fotos", key="btn_home_postural",
-                     use_container_width=True, type="primary"):
-            st.session_state['area'] = 'postural'
-            st.rerun()
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    col3, col4 = st.columns(2)
-
-    with col3:
-        st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
-                    text-align:center; background:#f8f9fa; min-height:195px;">
-            <div style="font-size:2.8rem; margin-bottom:0.4rem;">👤</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Portal do Cliente</h3>
-            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
-                Registre seu peso, acompanhe sua evolução e visualize seu progresso.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Acessar Portal", key="btn_home_portal",
-                     use_container_width=True, type="primary"):
-            st.session_state['area'] = 'portal_cliente'
-            st.rerun()
-
-    with col4:
-        st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:12px; padding:1.8rem 1.0rem;
-                    text-align:center; background:#f8f9fa; min-height:195px;">
-            <div style="font-size:2.8rem; margin-bottom:0.4rem;">👩‍💼</div>
-            <h3 style="margin:0 0 0.5rem 0; font-size:1.1rem;">Acesso Professora</h3>
-            <p style="color:#666; font-size:0.85rem; margin:0; line-height:1.5;">
-                Gerencie clientes, anamneses e gere planos de treino personalizados.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Acesso Restrito", key="btn_home_prof", use_container_width=True):
+        if st.button("Acesso Professora", key="btn_home_prof",
+                     use_container_width=True):
             st.session_state['area'] = 'professora'
             st.rerun()
 
@@ -644,11 +608,6 @@ def _pagina_home():
 # ── Página: Anamnese (cliente) ────────────────────────────────────────────────
 
 def _pagina_anamnese():
-    if st.button("← Início", key="btn_voltar_anamnese"):
-        st.session_state['area'] = None
-        st.session_state.pop('anamnese_confirmada', None)
-        st.rerun()
-
     # Tela de confirmação pós-envio
     if st.session_state.get('anamnese_confirmada'):
         st.balloons()
@@ -659,8 +618,7 @@ def _pagina_anamnese():
         st.info("Você pode fechar esta página ou clicar em '← Início' para voltar.")
         return
 
-    st.title("Ficha de Anamnese")
-    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+    st.markdown("### Ficha de Anamnese")
     st.divider()
 
     if st.session_state.get('an_submit_attempted'):
@@ -992,19 +950,13 @@ def _pagina_anamnese():
 # ── Página: Upload de Fotos Posturais (cliente) ──────────────────────────────
 
 def _pagina_upload_postural():
-    if st.button("← Início", key="btn_voltar_postural"):
-        st.session_state['area'] = None
-        st.session_state.pop('postural_confirmada', None)
-        st.rerun()
-
     if st.session_state.get('postural_confirmada'):
         st.balloons()
         st.success("✅ Fotos enviadas com sucesso! Em breve a professora entrará em contato.")
         st.info("Você pode fechar esta página ou clicar em '← Início' para voltar.")
         return
 
-    st.title("Avaliação Postural")
-    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+    st.markdown("### Avaliação Postural")
     st.divider()
 
     st.markdown("### Seus dados")
@@ -1159,18 +1111,9 @@ def _form_cadastro_cliente():
 
 
 def _pagina_portal_cliente():
-    if st.button("← Início", key="btn_voltar_portal"):
-        st.session_state['area'] = None
-        st.session_state.pop('cliente_slug', None)
-        st.session_state.pop('portal_modo', None)
-        st.session_state.pop('portal_nome_hint', None)
-        st.rerun()
-
     # ── Identificação ─────────────────────────────────────────────────────────
     if not st.session_state.get('cliente_slug'):
-        st.title("Portal do Cliente")
-        st.markdown('<p class="subtitulo">Studio Personal Training</p>',
-                    unsafe_allow_html=True)
+        st.markdown("### Meu Progresso")
         st.divider()
 
         if st.session_state.get('portal_modo') == 'cadastro':
@@ -1216,8 +1159,7 @@ def _pagina_portal_cliente():
     nome_c = cad_c.get("nome", slug)
     meta_p = cad_c.get("meta_peso")
 
-    st.title(f"Olá, {nome_c.split()[0]}!")
-    st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
+    st.markdown(f"### Olá, {nome_c.split()[0]}! 👋")
 
     col_sair, _ = st.columns([1, 5])
     with col_sair:
@@ -2196,6 +2138,36 @@ def _tab_clientes():
         st.divider()
 
 
+# ── Página: Aluno ────────────────────────────────────────────────────────────
+
+def _pagina_aluno():
+    if st.button("← Início", key="btn_voltar_aluno"):
+        for k in ('anamnese_confirmada', 'postural_confirmada',
+                  'cliente_slug', 'portal_modo', 'portal_nome_hint'):
+            st.session_state.pop(k, None)
+        st.session_state['area'] = None
+        st.rerun()
+
+    st.title("Studio Personal Training")
+    st.markdown('<p class="subtitulo">Área do Aluno</p>', unsafe_allow_html=True)
+    st.divider()
+
+    tab_an, tab_post, tab_prog = st.tabs([
+        "📋  Anamnese",
+        "📸  Avaliação Postural",
+        "📊  Meu Progresso",
+    ])
+
+    with tab_an:
+        _pagina_anamnese()
+
+    with tab_post:
+        _pagina_upload_postural()
+
+    with tab_prog:
+        _pagina_portal_cliente()
+
+
 # ── Página: Professora ────────────────────────────────────────────────────────
 
 def _pagina_professora():
@@ -2270,11 +2242,7 @@ if 'autenticado' not in st.session_state:
 _area = st.session_state['area']
 if _area is None:
     _pagina_home()
-elif _area == 'cliente':
-    _pagina_anamnese()
-elif _area == 'postural':
-    _pagina_upload_postural()
-elif _area == 'portal_cliente':
-    _pagina_portal_cliente()
+elif _area == 'aluno':
+    _pagina_aluno()
 else:
     _pagina_professora()
