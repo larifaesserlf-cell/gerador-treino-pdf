@@ -5,6 +5,7 @@ import smtplib
 import tempfile
 import unicodedata
 from datetime import date, datetime
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -46,7 +47,11 @@ st.markdown("""
     .subtitulo {
         color: #555555; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
     }
-
+    input[type="text"], input[type="email"], input[type="number"],
+    textarea, .stTextInput input, .stTextArea textarea {
+        border-color: rgba(255,255,255,0.2) !important;
+        box-shadow: none !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1265,6 +1270,143 @@ def _pagina_portal_cliente():
                                 key=f"portal_prog_med_{slug}")
 
 
+# ── Envio de treino por e-mail ────────────────────────────────────────────────
+
+def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes, nome_arquivo):
+    try:
+        from config import EMAIL_REMETENTE, EMAIL_SENHA
+        if not EMAIL_REMETENTE or not EMAIL_SENHA:
+            st.error("E-mail não configurado. Verifique config.py.")
+            return
+        nome_primeiro = nome.split()[0] if nome else nome
+        corpo_html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0"
+       style="background:#ffffff;border-radius:8px;overflow:hidden;
+              box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:600px;">
+  <tr>
+    <td style="background:#111111;padding:28px 32px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">
+        🏋️ Studio Personal Training
+      </h1>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:36px 40px;">
+      <p style="font-size:16px;color:#222;margin:0 0 14px 0;">
+        Olá, <strong>{nome_primeiro}</strong>! 👋
+      </p>
+      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 16px 0;">
+        Seu <strong>plano de treino personalizado</strong> está pronto!
+        Preparamos com cuidado um programa completo pensado especialmente para você.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#f7f7f7;border-radius:6px;margin:20px 0;">
+        <tr>
+          <td style="padding:16px 22px;">
+            <p style="margin:5px 0;font-size:14px;color:#444;">
+              <strong>🎯 Objetivo:</strong> {objetivo_label}
+            </p>
+            <p style="margin:5px 0;font-size:14px;color:#444;">
+              <strong>📅 Período do plano:</strong> {periodo} semanas
+            </p>
+            <p style="margin:5px 0;font-size:14px;color:#444;">
+              <strong>📎 Anexo:</strong> {nome_arquivo}
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 16px 0;">
+        O PDF com todos os seus treinos, séries, repetições e orientações está
+        em anexo. Abra, salve no celular e leve para a academia! 💪
+      </p>
+      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 6px 0;">
+        Qualquer dúvida é só me chamar. Vamos juntos nessa jornada!
+      </p>
+      <p style="font-size:15px;color:#222;margin:0;">
+        Com carinho,<br>
+        <strong>Sua professora</strong> — Studio Personal Training
+      </p>
+    </td>
+  </tr>
+  <tr>
+    <td style="background:#f0f0f0;padding:18px 32px;text-align:center;
+               border-top:1px solid #e0e0e0;">
+      <p style="margin:0;font-size:12px;color:#999;">
+        Studio Personal Training &nbsp;|&nbsp; Este e-mail foi enviado automaticamente.
+      </p>
+    </td>
+  </tr>
+</table>
+</td></tr>
+</table>
+</body></html>"""
+
+        msg = MIMEMultipart('mixed')
+        msg['From']    = EMAIL_REMETENTE
+        msg['To']      = email_dest
+        msg['Subject'] = "Seu Plano de Treino Personalizado — Studio Personal Training"
+        msg.attach(MIMEText(corpo_html, 'html', 'utf-8'))
+
+        anexo = MIMEApplication(pdf_bytes, _subtype='pdf')
+        anexo.add_header('Content-Disposition', 'attachment', filename=nome_arquivo)
+        msg.attach(anexo)
+
+        with smtplib.SMTP('smtp.gmail.com', 587) as srv:
+            srv.starttls()
+            srv.login(EMAIL_REMETENTE, EMAIL_SENHA)
+            srv.sendmail(EMAIL_REMETENTE, email_dest, msg.as_string())
+
+        st.success(f"✅ Treino enviado para {email_dest}")
+        st.session_state['gt_mostrar_email'] = False
+    except Exception as e:
+        st.error(f"Erro ao enviar e-mail: {e}")
+
+
+def _form_email_treino(nome, objetivo_label, periodo, pdf_bytes, nome_arquivo):
+    st.markdown("#### 📧 Enviar Treino por E-mail")
+
+    slug_c       = _slug(nome)
+    cad          = _carregar_json(_cadastro_path(slug_c), {})
+    email_sug    = cad.get("email", "")
+
+    email_dest = st.text_input(
+        "E-mail do cliente",
+        value=email_sug,
+        key="gt_email_dest",
+        placeholder="cliente@email.com",
+    )
+
+    if not email_dest.strip():
+        st.info("Informe o e-mail do cliente para continuar.")
+        if st.button("Cancelar", key="btn_cancelar_email"):
+            st.session_state['gt_mostrar_email'] = False
+            st.rerun()
+        return
+
+    nome_primeiro = nome.split()[0] if nome else nome
+    with st.container(border=True):
+        st.markdown(f"**Para:** {email_dest}")
+        st.markdown("**Assunto:** Seu Plano de Treino Personalizado — Studio Personal Training")
+        st.markdown(f"**Corpo:** Mensagem personalizada para {nome_primeiro} · Objetivo: {objetivo_label} · {periodo} semanas")
+        st.markdown(f"**Anexo:** `{nome_arquivo}`")
+
+    col_env, col_can = st.columns(2)
+    with col_env:
+        if st.button("✉️  Confirmar e Enviar", type="primary",
+                     use_container_width=True, key="btn_confirmar_email_treino"):
+            with st.spinner("Enviando..."):
+                _realizar_envio_treino(nome, objetivo_label, periodo,
+                                       email_dest.strip(), pdf_bytes, nome_arquivo)
+    with col_can:
+        if st.button("Cancelar", use_container_width=True, key="btn_cancelar_email2"):
+            st.session_state['gt_mostrar_email'] = False
+            st.rerun()
+
+
 # ── Tab: Gerador de Treino ────────────────────────────────────────────────────
 
 def _tab_gerador_treino():
@@ -1399,16 +1541,39 @@ def _tab_gerador_treino():
                 st.error(f"Erro ao gerar o PDF: {exc}")
                 return
 
+        st.session_state['gt_pdf_bytes']        = pdf_bytes
+        st.session_state['gt_pdf_nome']          = nome_arquivo
+        st.session_state['gt_pdf_nome_cliente']  = nome.strip()
+        st.session_state['gt_pdf_objetivo_label'] = objetivo_label
+        st.session_state['gt_pdf_periodo']        = periodo
+        st.session_state['gt_mostrar_email']      = False
+
+    if st.session_state.get('gt_pdf_bytes'):
         st.success("Treino gerado com sucesso!")
-        col_dl_l, col_dl, col_dl_r = st.columns([1, 2, 1])
+        col_dl_l, col_dl, col_email, col_dl_r = st.columns([1, 2, 2, 1])
         with col_dl:
             st.download_button(
                 label="📥  Baixar PDF",
-                data=pdf_bytes,
-                file_name=nome_arquivo,
+                data=st.session_state['gt_pdf_bytes'],
+                file_name=st.session_state['gt_pdf_nome'],
                 mime="application/pdf",
                 use_container_width=True,
                 key="btn_dl_treino",
+            )
+        with col_email:
+            if st.button("📧  Enviar por E-mail", use_container_width=True,
+                         key="btn_email_treino"):
+                st.session_state['gt_mostrar_email'] = True
+                st.rerun()
+
+        if st.session_state.get('gt_mostrar_email'):
+            st.divider()
+            _form_email_treino(
+                st.session_state['gt_pdf_nome_cliente'],
+                st.session_state['gt_pdf_objetivo_label'],
+                st.session_state['gt_pdf_periodo'],
+                st.session_state['gt_pdf_bytes'],
+                st.session_state['gt_pdf_nome'],
             )
 
 
