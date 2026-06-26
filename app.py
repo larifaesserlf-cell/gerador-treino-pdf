@@ -4,7 +4,7 @@ import os
 import smtplib
 import tempfile
 import unicodedata
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -19,6 +19,8 @@ from gerar_pdf import gerar_pdf
 from gerar_pdf_anamnese import gerar_pdf_anamnese
 from gerar_pdf_postural import gerar_pdf_postural
 from gerar_pdf_progresso import gerar_pdf_progresso
+import calendar as cal_module
+from collections import Counter
 import random
 
 try:
@@ -296,6 +298,28 @@ def _carregar_municipios():
 def _cadastro_path(slug):  return f"dados_clientes/cadastro_{slug}.json"
 def _medidas_path(slug):   return f"dados_clientes/medidas_{slug}.json"
 def _peso_path(slug):      return f"dados_clientes/peso_{slug}.json"
+def _acesso_path(slug):    return f"dados_clientes/acesso_{slug}.json"
+def _checkins_path(slug):  return f"dados_clientes/checkins_{slug}.json"
+def _feedback_path(slug):  return f"dados_clientes/feedback_{slug}.json"
+def _treino_path(slug):    return f"dados_clientes/treino_{slug}.json"
+
+
+def _semana_atual():
+    iso = date.today().isocalendar()
+    return f"{iso[0]}-W{iso[1]:02d}"
+
+
+def _treinos_letras(divisao_key):
+    mapa = {
+        "AB_4x":          ["A", "B"],
+        "ABC":            ["A", "B", "C"],
+        "ABCD":           ["A", "B", "C", "D"],
+        "full_body_3x":   ["A", "B", "C"],
+        "full_body_50_2x": ["A", "B"],
+        "full_body_50_3x": ["A", "B", "C"],
+        "push_pull_legs": ["Push", "Pull", "Legs"],
+    }
+    return mapa.get(divisao_key, ["A", "B"])
 
 
 def _carregar_json(path, default):
@@ -600,6 +624,26 @@ def _pagina_home():
         if st.button("Acesso Professora", key="btn_home_prof",
                      use_container_width=True):
             st.session_state['area'] = 'professora'
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    col_ll, col_login, col_rr = st.columns([1, 2, 1])
+    with col_login:
+        st.markdown("""
+        <div style="border:1px solid #ddd; border-radius:14px; padding:1.6rem 1.2rem;
+                    text-align:center; background:#f8f9fa;">
+            <div style="font-size:2.8rem; margin-bottom:0.4rem;">🔑</div>
+            <h3 style="margin:0 0 0.4rem 0; font-size:1.1rem;">Aluno — Fazer Login</h3>
+            <p style="color:#666; font-size:0.85rem; margin:0;">
+                Acesse sua área com usuário e senha fornecidos pela professora.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("Entrar como Aluno", key="btn_home_aluno_login",
+                     use_container_width=True):
+            st.session_state['area'] = 'aluno_login'
             st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -1548,6 +1592,15 @@ def _tab_gerador_treino():
         st.session_state['gt_pdf_periodo']        = periodo
         st.session_state['gt_mostrar_email']      = False
 
+        # Salvar dados do treino para exibição na área do aluno
+        treino_json = {
+            "dados": dados,
+            "treinos": {k: list(v) for k, v in treinos.items()},
+            "descricoes": descricoes,
+            "gerado_em": datetime.now().isoformat(),
+        }
+        _salvar_json(_treino_path(_slug(nome.strip())), treino_json)
+
     if st.session_state.get('gt_pdf_bytes'):
         st.success("Treino gerado com sucesso!")
         col_dl_l, col_dl, col_email, col_dl_r = st.columns([1, 2, 2, 1])
@@ -1974,10 +2027,12 @@ def _perfil_cliente_prof(slug):
     with col_ti:
         st.markdown(f"#### {nome_c}")
 
-    tab_dados, tab_med, tab_prog = st.tabs([
+    tab_dados, tab_med, tab_prog, tab_checkin_prof, tab_feedback_prof = st.tabs([
         "👤  Dados Pessoais",
         "📏  Medidas e Evolução",
         "📈  Progresso",
+        "📅  Check-ins",
+        "💬  Feedbacks",
     ])
 
     # ── Aba: Dados Pessoais ───────────────────────────────────────────────────
@@ -2024,6 +2079,65 @@ def _perfil_cliente_prof(slug):
             st.markdown(f"🏋️ Último treino: `{os.path.basename(treinos[0])}`")
         else:
             st.markdown("🏋️ Treino gerado: _nenhum_")
+
+        st.divider()
+        st.markdown("#### 🔑 Acesso do Aluno")
+        acc_existente = _carregar_json(_acesso_path(slug_c), {})
+        if acc_existente:
+            st.success(
+                f"Acesso ativo — Usuário: `{acc_existente['usuario']}` "
+                f"| Senha: `{acc_existente['senha']}`"
+            )
+            if st.button("Recriar acesso", key=f"btn_recriar_acesso_{slug}",
+                         use_container_width=True):
+                st.session_state[f'confirmar_recriar_{slug}'] = True
+                st.rerun()
+            if st.session_state.get(f'confirmar_recriar_{slug}'):
+                col_sim, col_nao = st.columns(2)
+                with col_sim:
+                    if st.button("Sim, recriar", key=f"btn_sim_recriar_{slug}",
+                                 type="primary", use_container_width=True):
+                        st.session_state.pop(f'confirmar_recriar_{slug}', None)
+                        st.session_state[f'fazer_acesso_{slug}'] = True
+                        st.rerun()
+                with col_nao:
+                    if st.button("Cancelar", key=f"btn_nao_recriar_{slug}",
+                                 use_container_width=True):
+                        st.session_state.pop(f'confirmar_recriar_{slug}', None)
+                        st.rerun()
+        else:
+            st.session_state[f'fazer_acesso_{slug}'] = st.session_state.get(
+                f'fazer_acesso_{slug}', False)
+
+        if not acc_existente or st.session_state.get(f'fazer_acesso_{slug}'):
+            if not acc_existente:
+                if st.button("Criar acesso", key=f"btn_criar_acesso_{slug}",
+                             type="primary", use_container_width=True):
+                    st.session_state[f'fazer_acesso_{slug}'] = True
+                    st.rerun()
+
+            if st.session_state.get(f'fazer_acesso_{slug}'):
+                primeiro_nome = _slug(nome_c.split()[0])
+                wpp = cad.get("whatsapp", "")
+                digitos_tel = ''.join(c for c in wpp if c.isdigit())
+                ultimos_4 = digitos_tel[-4:] if len(digitos_tel) >= 4 else "0000"
+                usuario_gerado = primeiro_nome
+                senha_gerada   = ultimos_4 + primeiro_nome
+                acc_novo = {
+                    "usuario":   usuario_gerado,
+                    "senha":     senha_gerada,
+                    "nome":      nome_c,
+                    "slug":      slug_c,
+                    "criado_em": datetime.now().isoformat(),
+                }
+                _salvar_json(_acesso_path(slug_c), acc_novo)
+                st.session_state.pop(f'fazer_acesso_{slug}', None)
+                st.success("✅ Acesso criado!")
+                st.info(
+                    f"**Usuário:** `{usuario_gerado}`  |  **Senha:** `{senha_gerada}`\n\n"
+                    "Envie essas credenciais para o aluno."
+                )
+                st.rerun()
 
         st.divider()
         with st.expander("✏️ Editar dados"):
@@ -2252,6 +2366,112 @@ def _perfil_cliente_prof(slug):
             except Exception as e:
                 st.error(f"Erro ao gerar PDF: {e}")
 
+    # ── Aba: Check-ins (professora) ───────────────────────────────────────────
+    with tab_checkin_prof:
+        checkins_p = _carregar_json(_checkins_path(slug_c), [])
+
+        hoje_p = date.today()
+        # Frequência desta semana (seg a dom)
+        inicio_semana = hoje_p - timedelta(days=hoje_p.weekday())
+        fim_semana    = inicio_semana + timedelta(days=6)
+        treinos_semana = [
+            c for c in checkins_p
+            if c.get('tipo') == 'treinou'
+            and c.get('data','') >= inicio_semana.strftime("%Y-%m-%d")
+            and c.get('data','') <= fim_semana.strftime("%Y-%m-%d")
+        ]
+        st.metric("Treinos esta semana", len(treinos_semana))
+
+        # Calendário do mês atual
+        st.markdown("#### Calendário do mês")
+        html_cal = _render_calendario_checkins(slug_c, hoje_p.year, hoje_p.month)
+        st.markdown(html_cal, unsafe_allow_html=True)
+
+        mes_str_p = f"{hoje_p.year}-{hoje_p.month:02d}"
+        treinos_mes_p = [c for c in checkins_p
+                         if c.get('data','').startswith(mes_str_p)
+                         and c.get('tipo') == 'treinou']
+        st.markdown(f"**{len(treinos_mes_p)} treinos este mês**")
+
+        # Gráfico por tipo de treino
+        if checkins_p and _HAS_PLOTLY:
+            contagem = Counter(
+                c.get('treino','?') for c in checkins_p
+                if c.get('tipo') == 'treinou' and c.get('treino')
+            )
+            if contagem:
+                st.markdown("#### Treinos por tipo")
+                fig_ci = go.Figure(go.Bar(
+                    x=list(contagem.keys()), y=list(contagem.values()),
+                    marker_color="#333333",
+                ))
+                fig_ci.update_layout(
+                    xaxis_title="Treino", yaxis_title="Vezes",
+                    plot_bgcolor="white", paper_bgcolor="white",
+                    margin=dict(l=40, r=20, t=20, b=40), height=250,
+                )
+                st.plotly_chart(fig_ci, use_container_width=True,
+                                key=f"ci_bar_{slug}")
+        elif not checkins_p:
+            st.info("Nenhum check-in registrado ainda.")
+
+    # ── Aba: Feedbacks (professora) ───────────────────────────────────────────
+    with tab_feedback_prof:
+        feedbacks_p = _carregar_json(_feedback_path(slug_c), [])
+        if not feedbacks_p:
+            st.info("Nenhum feedback enviado ainda.")
+        else:
+            st.markdown(f"**{len(feedbacks_p)} feedback(s) recebido(s)**")
+            for fb in reversed(feedbacks_p):
+                humor   = fb.get('humor', '')
+                cansado = 'Muito cansado' in humor
+                dor_art = fb.get('dor_articular', 'Não') == 'Sim'
+                bg = '#fff3cd' if dor_art else ('#fde8e8' if cansado else '#ffffff')
+                borda = '#ffc107' if dor_art else ('#dc3545' if cansado else '#dee2e6')
+                st.markdown(
+                    f'<div style="background:{bg}; border:1px solid {borda}; '
+                    f'border-radius:8px; padding:12px 16px; margin-bottom:10px;">'
+                    f'<b>{fb.get("data_envio","")}</b>  '
+                    f'({fb.get("semana","")}) &nbsp;|&nbsp; '
+                    f'Humor: <b>{humor}</b> &nbsp;|&nbsp; '
+                    f'Dor muscular: <b>{fb.get("dor_muscular","")}/5</b> &nbsp;|&nbsp; '
+                    f'Dor articular: <b>{fb.get("dor_articular","")}</b>'
+                    + (f' — {fb.get("dor_regiao","")}' if dor_art else '') +
+                    f'<br>Completou treinos: <b>{fb.get("completou_treinos","")}</b> '
+                    f'&nbsp;|&nbsp; Sono: <b>{fb.get("sono","")}</b>'
+                    + (f'<br><i>Obs: {fb.get("obs","")}</i>' if fb.get('obs') else '') +
+                    '</div>',
+                    unsafe_allow_html=True,
+                )
+
+            # Gráfico de evolução do humor
+            if _HAS_PLOTLY and len(feedbacks_p) >= 2:
+                HUMOR_NUM = {
+                    "Ótimo 😄": 5, "Bem 🙂": 4, "Regular 😐": 3,
+                    "Cansado 😴": 2, "Muito cansado 😩": 1,
+                }
+                datas_fb  = [f.get("data_envio","")[:10] for f in feedbacks_p]
+                humor_num = [HUMOR_NUM.get(f.get("humor",""), 3) for f in feedbacks_p]
+                dor_num   = [f.get("dor_muscular", 1) for f in feedbacks_p]
+                fig_fb = go.Figure()
+                fig_fb.add_trace(go.Scatter(
+                    x=datas_fb, y=humor_num, mode="lines+markers",
+                    name="Humor (1-5)", line=dict(color="#333333", width=2),
+                ))
+                fig_fb.add_trace(go.Scatter(
+                    x=datas_fb, y=dor_num, mode="lines+markers",
+                    name="Dor muscular (1-5)", line=dict(color="#888888", width=2, dash="dash"),
+                ))
+                fig_fb.update_layout(
+                    xaxis_title="Data", yaxis=dict(range=[0, 5.5]),
+                    plot_bgcolor="white", paper_bgcolor="white",
+                    margin=dict(l=40, r=20, t=20, b=60), height=280,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                )
+                st.markdown("#### Evolução Humor / Dor")
+                st.plotly_chart(fig_fb, use_container_width=True,
+                                key=f"fb_chart_{slug}")
+
 
 def _tab_clientes():
     st.markdown("### Gestão de Clientes")
@@ -2301,6 +2521,339 @@ def _tab_clientes():
                 st.rerun()
 
         st.divider()
+
+
+# ── Calendário de check-ins (helper HTML) ────────────────────────────────────
+
+def _render_calendario_checkins(slug, ano, mes):
+    checkins = _carregar_json(_checkins_path(slug), [])
+    mapa = {c['data']: c for c in checkins}
+    hoje = date.today()
+
+    dias_semana_nomes = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+    html = (
+        '<table style="width:100%;border-collapse:separate;border-spacing:3px;'
+        'text-align:center;margin-bottom:8px;">'
+        '<tr>' +
+        ''.join(f'<th style="padding:6px;color:#888;font-size:0.8rem;">{d}</th>'
+                for d in dias_semana_nomes) +
+        '</tr>'
+    )
+    for semana in cal_module.monthcalendar(ano, mes):
+        html += '<tr>'
+        for dia in semana:
+            if dia == 0:
+                html += '<td></td>'
+                continue
+            data_str = f"{ano}-{mes:02d}-{dia:02d}"
+            data_d   = date(ano, mes, dia)
+            futuro   = data_d > hoje
+            checkin  = mapa.get(data_str)
+            if checkin:
+                tipo   = checkin.get('tipo', '')
+                letra  = checkin.get('treino', '')
+                if tipo == 'treinou':
+                    bg, icon = '#d4edda', '✅'
+                else:
+                    bg, icon = '#e9ecef', '😴'
+                html += (
+                    f'<td style="background:{bg};border-radius:6px;padding:5px 2px;">'
+                    f'<div style="font-size:1rem;">{icon}</div>'
+                    f'<div style="font-size:0.85rem;font-weight:600;">{dia}</div>'
+                    + (f'<div style="font-size:0.7rem;color:#555;">{letra}</div>' if letra else '') +
+                    '</td>'
+                )
+            elif futuro:
+                html += (
+                    f'<td style="padding:5px 2px;color:#ccc;">'
+                    f'<div style="font-size:0.85rem;">{dia}</div></td>'
+                )
+            else:
+                html += (
+                    f'<td style="padding:5px 2px;">'
+                    f'<div style="font-size:0.85rem;">{dia}</div></td>'
+                )
+        html += '</tr>'
+    html += '</table>'
+    return html
+
+
+# ── Página: Login do Aluno ────────────────────────────────────────────────────
+
+def _pagina_login_aluno():
+    st.title("Studio Personal Training")
+    st.markdown("### Acesso do Aluno")
+    st.divider()
+
+    col_l, col_form, col_r = st.columns([1, 2, 1])
+    with col_form:
+        with st.form("login_aluno_form"):
+            usuario = st.text_input("Usuário", placeholder="Ex: maria")
+            senha   = st.text_input("Senha", type="password", placeholder="Ex: 1234maria")
+            entrar  = st.form_submit_button("Entrar", use_container_width=True,
+                                            type="primary")
+        if entrar:
+            if not usuario.strip() or not senha.strip():
+                st.error("Informe usuário e senha.")
+            else:
+                encontrado = False
+                os.makedirs("dados_clientes", exist_ok=True)
+                for arq in glob.glob("dados_clientes/acesso_*.json"):
+                    acc = _carregar_json(arq, {})
+                    if (acc.get("usuario") == usuario.strip().lower()
+                            and acc.get("senha") == senha.strip()):
+                        st.session_state['aluno_logado_slug'] = acc['slug']
+                        st.session_state['area']              = 'aluno_logado'
+                        encontrado = True
+                        st.rerun()
+                        break
+                if not encontrado:
+                    st.error("Usuário ou senha incorretos.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("← Voltar ao início", key="btn_voltar_login_aluno",
+                     use_container_width=True):
+            st.session_state['area'] = None
+            st.rerun()
+
+
+# ── Aba: Meu Treino (aluno logado) ────────────────────────────────────────────
+
+def _tab_aluno_meu_treino(slug):
+    treino = _carregar_json(_treino_path(slug), {})
+    if not treino:
+        st.info("Nenhum treino gerado ainda. A professora irá preparar seu plano em breve!")
+        return
+
+    dados_t   = treino.get('dados', {})
+    treinos_t = treino.get('treinos', {})
+    descricoes_t = treino.get('descricoes', {})
+
+    st.markdown(f"#### Plano de Treino")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric("Objetivo", str(dados_t.get('objetivo', '')).replace('_',' ').title())
+    with c2:
+        st.metric("Período", f"{dados_t.get('periodo', '')} sem.")
+    with c3:
+        st.metric("Frequência", f"{dados_t.get('frequencia', '')}×/sem.")
+
+    st.caption(
+        f"Início: {dados_t.get('data_inicio', '')}  |  "
+        f"Divisão: {dados_t.get('divisao', '').upper()}  |  "
+        f"Nível: {dados_t.get('nivel', '').title()}"
+    )
+    if dados_t.get('restricoes'):
+        st.caption(f"Restrições: {dados_t['restricoes']}")
+
+    st.divider()
+
+    for letra, exercicios in treinos_t.items():
+        desc = descricoes_t.get(letra, f"Treino {letra}")
+        with st.expander(f"**Treino {letra}** — {desc}", expanded=False):
+            for i, ex in enumerate(exercicios, 1):
+                if isinstance(ex, dict):
+                    nome_ex  = ex.get('nome', '')
+                    grupo    = ex.get('grupo', '')
+                    series   = ex.get('series', '')
+                    reps     = ex.get('reps', '')
+                    metodo   = ex.get('metodo', '')
+                    st.markdown(
+                        f"**{i}. {nome_ex}**"
+                        + (f" &nbsp;·&nbsp; <span style='color:#666;font-size:0.9em'>{grupo}</span>" if grupo else ""),
+                        unsafe_allow_html=True,
+                    )
+                    info_parts = []
+                    if series: info_parts.append(f"{series} séries")
+                    if reps:   info_parts.append(f"{reps} reps")
+                    if metodo: info_parts.append(metodo)
+                    if info_parts:
+                        st.caption("  |  ".join(info_parts))
+                else:
+                    st.markdown(f"**{i}.** {ex}")
+
+
+# ── Aba: Check-in (aluno logado) ─────────────────────────────────────────────
+
+def _tab_aluno_checkin(slug):
+    treino = _carregar_json(_treino_path(slug), {})
+    divisao_key = treino.get('dados', {}).get('divisao', 'AB_4x') if treino else 'AB_4x'
+    letras = _treinos_letras(divisao_key)
+
+    st.markdown("#### Calendário de Treinos")
+
+    hoje = date.today()
+    html_cal = _render_calendario_checkins(slug, hoje.year, hoje.month)
+    st.markdown(html_cal, unsafe_allow_html=True)
+
+    checkins = _carregar_json(_checkins_path(slug), [])
+    mes_str = f"{hoje.year}-{hoje.month:02d}"
+    treinos_mes = [c for c in checkins
+                   if c.get('data', '').startswith(mes_str)
+                   and c.get('tipo') == 'treinou']
+    st.markdown(f"**{len(treinos_mes)} treinos este mês**")
+
+    st.divider()
+    st.markdown("#### Registrar treino de hoje")
+
+    tipo_ci = st.radio("Tipo", ["Treinou", "Descanso"],
+                        horizontal=True, key=f"ci_tipo_{slug}")
+
+    treino_letra = None
+    if tipo_ci == "Treinou":
+        treino_letra = st.selectbox("Qual treino?", letras, key=f"ci_letra_{slug}")
+
+    primeiro_do_mes = date(hoje.year, hoje.month, 1)
+    data_ci = st.date_input(
+        "Data", value=hoje,
+        min_value=primeiro_do_mes, max_value=hoje,
+        format="DD/MM/YYYY", key=f"ci_data_{slug}",
+    )
+
+    if st.button("Registrar", type="primary", key=f"btn_reg_ci_{slug}",
+                 use_container_width=True):
+        data_str = data_ci.strftime("%Y-%m-%d")
+        checkins = [c for c in checkins if c.get('data') != data_str]
+        checkins.append({
+            "data":      data_str,
+            "tipo":      "treinou" if tipo_ci == "Treinou" else "descanso",
+            "treino":    treino_letra if tipo_ci == "Treinou" else "",
+            "timestamp": datetime.now().isoformat(),
+        })
+        _salvar_json(_checkins_path(slug), checkins)
+        st.success("✅ Check-in registrado!")
+        st.rerun()
+
+    st.divider()
+    st.markdown("#### Últimos 7 registros")
+    recentes = sorted(checkins, key=lambda x: x.get('data', ''), reverse=True)[:7]
+    if not recentes:
+        st.info("Nenhum registro ainda.")
+    for c in recentes:
+        dt_fmt = datetime.strptime(c['data'], "%Y-%m-%d").strftime("%d/%m")
+        if c.get('tipo') == 'treinou':
+            letra = c.get('treino', '')
+            st.markdown(f"✅ **{dt_fmt}** — Treino {letra}")
+        else:
+            st.markdown(f"😴 **{dt_fmt}** — Descanso")
+
+
+# ── Aba: Feedback (aluno logado) ──────────────────────────────────────────────
+
+def _tab_aluno_feedback(slug):
+    feedbacks = _carregar_json(_feedback_path(slug), [])
+    semana    = _semana_atual()
+
+    ja_enviou = any(f.get('semana') == semana for f in feedbacks)
+
+    if ja_enviou:
+        st.success("✅ Você já enviou o feedback desta semana!")
+        ultimo = next(
+            (f for f in reversed(feedbacks) if f.get('semana') == semana), {}
+        )
+        with st.container(border=True):
+            st.markdown(f"**Enviado em:** {ultimo.get('data_envio', '')}")
+            st.markdown(f"**Humor:** {ultimo.get('humor', '')}")
+            st.markdown(f"**Dor muscular:** {ultimo.get('dor_muscular', '')}/5")
+            st.markdown(f"**Completou treinos:** {ultimo.get('completou_treinos', '')}")
+            if ultimo.get('obs'):
+                st.markdown(f"**Obs:** {ultimo.get('obs', '')}")
+        return
+
+    st.markdown("#### 💬 Feedback Semanal")
+    st.caption("Responda uma vez por semana para ajudar a professora a acompanhar sua evolução.")
+
+    HUMOR_OPCOES = ["Ótimo 😄", "Bem 🙂", "Regular 😐", "Cansado 😴", "Muito cansado 😩"]
+    humor = st.select_slider(
+        "Como você se sentiu nos treinos essa semana?",
+        options=HUMOR_OPCOES, key=f"fb_humor_{slug}",
+    )
+
+    dor_muscular = st.slider(
+        "Nível de dor muscular (1 = sem dor  /  5 = muita dor)",
+        min_value=1, max_value=5, value=1, key=f"fb_dorm_{slug}",
+    )
+
+    dor_articular = st.radio(
+        "Sentiu alguma dor articular ou desconforto?",
+        ["Não", "Sim"], horizontal=True, key=f"fb_dora_{slug}",
+    )
+    dor_regiao = ""
+    if dor_articular == "Sim":
+        dor_regiao = st.text_input("Onde? (ex: joelho, ombro)",
+                                    key=f"fb_dorr_{slug}")
+
+    completou = st.radio(
+        "Conseguiu completar todos os treinos planejados?",
+        ["Sim", "Não", "Parcialmente"], horizontal=True, key=f"fb_comp_{slug}",
+    )
+
+    sono = st.radio(
+        "Está conseguindo dormir bem?",
+        ["Sim", "Mais ou menos", "Não"], horizontal=True, key=f"fb_sono_{slug}",
+    )
+
+    obs_fb = st.text_area(
+        "Alguma observação para a professora? (opcional)",
+        height=80, key=f"fb_obs_{slug}",
+    )
+
+    if st.button("Enviar feedback", type="primary", key=f"btn_fb_{slug}",
+                 use_container_width=True):
+        feedbacks.append({
+            "semana":           semana,
+            "data_envio":       datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "humor":            humor,
+            "dor_muscular":     dor_muscular,
+            "dor_articular":    dor_articular,
+            "dor_regiao":       dor_regiao,
+            "completou_treinos": completou,
+            "sono":             sono,
+            "obs":              obs_fb.strip(),
+            "timestamp":        datetime.now().isoformat(),
+        })
+        _salvar_json(_feedback_path(slug), feedbacks)
+        st.success("✅ Feedback enviado! Obrigada pela resposta!")
+        st.rerun()
+
+
+# ── Página: Aluno Logado ──────────────────────────────────────────────────────
+
+def _pagina_aluno_logado():
+    slug  = st.session_state.get('aluno_logado_slug', '')
+    cad   = _carregar_json(_cadastro_path(slug), {})
+    nome_c = cad.get('nome', slug)
+
+    col_titulo, col_sair = st.columns([7, 1])
+    with col_titulo:
+        st.title("Studio Personal Training")
+        st.markdown(
+            f'<p class="subtitulo">Olá, {nome_c.split()[0]}! 👋</p>',
+            unsafe_allow_html=True,
+        )
+    with col_sair:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        if st.button("Sair", key="btn_sair_aluno_logado"):
+            st.session_state.pop('aluno_logado_slug', None)
+            st.session_state['area'] = None
+            st.rerun()
+
+    st.divider()
+
+    tab_treino_a, tab_checkin_a, tab_feedback_a = st.tabs([
+        "🏋️  Meu Treino",
+        "📅  Check-in",
+        "💬  Feedback",
+    ])
+
+    with tab_treino_a:
+        _tab_aluno_meu_treino(slug)
+
+    with tab_checkin_a:
+        _tab_aluno_checkin(slug)
+
+    with tab_feedback_a:
+        _tab_aluno_feedback(slug)
 
 
 # ── Página: Aluno ────────────────────────────────────────────────────────────
@@ -2409,5 +2962,9 @@ if _area is None:
     _pagina_home()
 elif _area == 'aluno':
     _pagina_aluno()
+elif _area == 'aluno_login':
+    _pagina_login_aluno()
+elif _area == 'aluno_logado':
+    _pagina_aluno_logado()
 else:
     _pagina_professora()
