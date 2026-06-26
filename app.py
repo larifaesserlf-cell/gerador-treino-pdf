@@ -46,6 +46,7 @@ st.markdown("""
     .subtitulo {
         color: #555555; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
     }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -217,6 +218,74 @@ def _idx_default(options, value):
         return 0
 
 
+def _format_phone(raw: str) -> str:
+    """Formata telefone brasileiro: (DD) 9 XXXX-XXXX."""
+    digits = ''.join(c for c in raw if c.isdigit())[:11]
+    n = len(digits)
+    if n == 0:
+        return ''
+    if n <= 2:
+        return f"({digits}"
+    if n == 3:
+        return f"({digits[:2]}) {digits[2:]}"
+    if n <= 7:
+        return f"({digits[:2]}) {digits[2]} {digits[3:]}"
+    return f"({digits[:2]}) {digits[2]} {digits[3:7]}-{digits[7:]}"
+
+
+
+_CIDADES_BRASIL = sorted([
+    # Capitais
+    "Aracaju — SE", "Belém — PA", "Belo Horizonte — MG", "Boa Vista — RR",
+    "Brasília — DF", "Campo Grande — MS", "Cuiabá — MT", "Curitiba — PR",
+    "Florianópolis — SC", "Fortaleza — CE", "Goiânia — GO", "João Pessoa — PB",
+    "Macapá — AP", "Maceió — AL", "Manaus — AM", "Natal — RN",
+    "Palmas — TO", "Porto Alegre — RS", "Porto Velho — RO", "Recife — PE",
+    "Rio Branco — AC", "Rio de Janeiro — RJ", "Salvador — BA", "São Luís — MA",
+    "São Paulo — SP", "Teresina — PI", "Vitória — ES",
+    # SP
+    "Bauru — SP", "Campinas — SP", "Carapicuíba — SP", "Diadema — SP",
+    "Guarulhos — SP", "Jundiaí — SP", "Mauá — SP", "Mogi das Cruzes — SP",
+    "Osasco — SP", "Piracicaba — SP", "Ribeirão Preto — SP", "Santo André — SP",
+    "Santos — SP", "São Bernardo do Campo — SP", "São José dos Campos — SP",
+    "Sorocaba — SP", "Suzano — SP",
+    # RJ
+    "Belford Roxo — RJ", "Campos dos Goytacazes — RJ", "Duque de Caxias — RJ",
+    "Niterói — RJ", "Nova Iguaçu — RJ", "Petrópolis — RJ",
+    "São Gonçalo — RJ", "Volta Redonda — RJ",
+    # MG
+    "Betim — MG", "Contagem — MG", "Juiz de Fora — MG", "Montes Claros — MG",
+    "Uberaba — MG", "Uberlândia — MG",
+    # BA
+    "Camaçari — BA", "Feira de Santana — BA", "Vitória da Conquista — BA",
+    # RS
+    "Canoas — RS", "Caxias do Sul — RS", "Pelotas — RS", "Santa Maria — RS",
+    # PR
+    "Cascavel — PR", "Foz do Iguaçu — PR", "Londrina — PR",
+    "Maringá — PR", "Ponta Grossa — PR", "São José dos Pinhais — PR",
+    # SC
+    "Blumenau — SC", "Chapecó — SC", "Criciúma — SC",
+    "Itajaí — SC", "Joinville — SC", "São José — SC",
+    # PE
+    "Caruaru — PE", "Olinda — PE", "Paulista — PE",
+    # CE
+    "Caucaia — CE", "Juazeiro do Norte — CE",
+    # GO
+    "Anápolis — GO", "Aparecida de Goiânia — GO",
+    # ES
+    "Cariacica — ES", "Serra — ES", "Vila Velha — ES",
+    # PA
+    "Ananindeua — PA", "Santarém — PA",
+    # Outros estados
+    "Imperatriz — MA", "Juazeiro — BA", "Mossoró — RN",
+    "Parnaíba — PI", "Rondonópolis — MT", "Sinop — MT", "Sobral — CE",
+])
+
+
+def _carregar_municipios():
+    return _CIDADES_BRASIL + ["Outra cidade"]
+
+
 # ── Helpers: gestão de clientes ───────────────────────────────────────────────
 
 def _cadastro_path(slug):  return f"dados_clientes/cadastro_{slug}.json"
@@ -304,6 +373,13 @@ def _chart_medidas(registros, height=350):
 
 
 # ── Constantes ────────────────────────────────────────────────────────────────
+
+OCUPACOES_LISTA = [
+    "Professora", "Personal Trainer", "Nutricionista", "Médico", "Enfermeiro",
+    "Fisioterapeuta", "Administrador", "Advogado", "Engenheiro", "Contador",
+    "Designer", "Desenvolvedor", "Vendedor", "Comerciante", "Autônomo",
+    "Estudante", "Aposentado", "Dona de casa", "Servidor público", "Outro",
+]
 
 PARQ_PERGUNTAS = [
     "Seu médico já disse que você tem algum problema cardíaco?",
@@ -587,29 +663,64 @@ def _pagina_anamnese():
     st.markdown('<p class="subtitulo">Studio Personal Training</p>', unsafe_allow_html=True)
     st.divider()
 
+    if st.session_state.get('an_submit_attempted'):
+        for _e in st.session_state.get('an_erros', []):
+            st.error(_e)
+
     # ── 1. Dados Pessoais ──────────────────────────────────────────────────────
     with st.expander("1. Dados Pessoais", expanded=True):
-        nome_cl = st.text_input("Nome completo *", key="an_nome")
+        nome_cl = st.text_input("Nome completo *", key="an_nome",
+                                placeholder="Ex: Maria da Silva")
+        if nome_cl and len(nome_cl.strip()) >= 3:
+            st.success("✅ Nome válido")
 
         col_nasc, col_sexo = st.columns([1, 2])
         with col_nasc:
             data_nasc = st.date_input("Data de nascimento",
-                                      value=None, format="DD/MM/YYYY", key="an_data_nasc")
+                                      value=None, format="DD/MM/YYYY", key="an_data_nasc",
+                                      min_value=date(1940, 1, 1), max_value=date.today())
         with col_sexo:
             sexo_cl = st.radio("Sexo", ["Feminino", "Masculino"],
                                horizontal=True, key="an_sexo")
 
         col_tel, col_email = st.columns(2)
         with col_tel:
-            telefone_cl = st.text_input("Telefone / WhatsApp", key="an_tel")
+            _raw_tel = st.session_state.get("an_tel", "")
+            if _raw_tel:
+                _fmt_tel = _format_phone(_raw_tel)
+                if _fmt_tel != _raw_tel:
+                    st.session_state["an_tel"] = _fmt_tel
+            telefone_cl = st.text_input("Telefone / WhatsApp", key="an_tel",
+                                        placeholder="(48) 9 0000-0000")
+            _dig_tel = ''.join(c for c in telefone_cl if c.isdigit())
+            if telefone_cl.strip() and len(_dig_tel) == 11:
+                st.success("✅ Telefone válido")
         with col_email:
-            email_cl = st.text_input("E-mail", key="an_email")
+            email_cl = st.text_input("E-mail", key="an_email",
+                                     placeholder="exemplo@email.com")
+            if email_cl.strip() and '@' in email_cl and '.' in email_cl.split('@')[-1]:
+                st.success("✅ E-mail válido")
 
         col_ocup, col_cidade = st.columns(2)
         with col_ocup:
-            ocupacao_cl = st.text_input("Ocupação profissional", key="an_ocupacao")
+            ocupacao_cl = st.selectbox("Ocupação profissional", OCUPACOES_LISTA,
+                                       key="an_ocupacao")
         with col_cidade:
-            cidade_cl = st.text_input("Cidade / Estado", key="an_cidade")
+            _municipios = _carregar_municipios()
+            if _municipios:
+                _opcoes_cid = [""] + _municipios
+                cidade_cl = st.selectbox(
+                    "Cidade / Estado",
+                    _opcoes_cid,
+                    key="an_cidade",
+                    format_func=lambda x: x if x else "Selecione a cidade...",
+                    help="Digite para filtrar",
+                )
+                if cidade_cl == "":
+                    cidade_cl = ""
+            else:
+                cidade_cl = st.text_input("Cidade / Estado", key="an_cidade",
+                                          placeholder="Ex: Florianópolis — SC")
 
     # ── 2. Objetivo ────────────────────────────────────────────────────────────
     with st.expander("2. Objetivo", expanded=True):
@@ -620,6 +731,7 @@ def _pagina_anamnese():
         objetivos_sel = st.multiselect(
             "Objetivo principal (pode marcar mais de um) *",
             objetivos_opcoes, key="an_objetivos",
+            placeholder="Selecione as opções",
         )
         objetivo_desc = st.text_area("Descreva seu objetivo com suas palavras",
                                      height=80, key="an_obj_desc")
@@ -724,7 +836,8 @@ def _pagina_anamnese():
         equip_cl_opcoes = ["Academia completa", "Halteres", "Barras", "Elásticos",
                            "Peso corporal", "Bicicleta ergométrica", "Esteira", "Outro"]
         equipamentos_cl = st.multiselect("Equipamentos disponíveis",
-                                         equip_cl_opcoes, key="an_equip")
+                                         equip_cl_opcoes, key="an_equip",
+                                         placeholder="Selecione as opções")
         nao_gosta_cl    = st.text_input("Atividade que não gosta ou não quer fazer (opcional)",
                                         key="an_nao_gosta")
         prefere_cl      = st.text_input("Atividade que gosta ou prefere (opcional)",
@@ -758,7 +871,8 @@ def _pagina_anamnese():
         )
         aceita_termo  = st.checkbox("Li e concordo com o termo acima *", key="an_termo")
         assinatura_cl = st.text_input("Nome completo para assinatura digital *",
-                                      key="an_assinatura")
+                                      key="an_assinatura",
+                                      placeholder="Escreva seu nome completo")
 
     st.divider()
 
@@ -778,11 +892,17 @@ def _pagina_anamnese():
             erros.append("Você deve aceitar o termo de responsabilidade.")
         if not assinatura_cl.strip():
             erros.append("Informe o nome para assinatura digital.")
+        _digitos_tel = ''.join(c for c in telefone_cl if c.isdigit())
+        if telefone_cl.strip() and len(_digitos_tel) not in (10, 11):
+            erros.append("Telefone inválido — use o formato (DD) 9 XXXX-XXXX.")
 
         if erros:
-            for e in erros:
-                st.error(e)
+            st.session_state['an_submit_attempted'] = True
+            st.session_state['an_erros'] = erros
+            st.rerun()
         else:
+            st.session_state['an_submit_attempted'] = False
+            st.session_state.pop('an_erros', None)
             dados_anamnese = {
                 "dados_pessoais": {
                     "nome":           nome_cl.strip(),
@@ -864,6 +984,8 @@ def _pagina_anamnese():
             _enviar_email(nome_cl.strip(), dados_anamnese)
 
             st.session_state['anamnese_confirmada'] = True
+            st.session_state.pop('an_submit_attempted', None)
+            st.session_state.pop('an_erros', None)
             st.rerun()
 
 
@@ -974,14 +1096,28 @@ def _form_cadastro_cliente():
     st.markdown("### Criar Cadastro")
     nome_hint = st.session_state.get('portal_nome_hint', '')
 
-    nome_c = st.text_input("Nome completo *", value=nome_hint, key="cad_nome")
+    nome_c = st.text_input("Nome completo *", value=nome_hint, key="cad_nome",
+                           placeholder="Nome completo")
+    if nome_c and len(nome_c.strip()) >= 3:
+        st.success("✅ Nome válido")
     col_nasc, col_wpp = st.columns(2)
     with col_nasc:
         nasc_c = st.date_input("Data de nascimento", value=None,
-                                format="DD/MM/YYYY", key="cad_nasc")
+                                format="DD/MM/YYYY", key="cad_nasc",
+                                min_value=date(1940, 1, 1), max_value=date.today())
     with col_wpp:
-        wpp_c = st.text_input("WhatsApp", key="cad_wpp")
-    email_c = st.text_input("E-mail", key="cad_email")
+        _raw_wpp = st.session_state.get("cad_wpp", "")
+        if _raw_wpp:
+            _fmt_wpp = _format_phone(_raw_wpp)
+            if _fmt_wpp != _raw_wpp:
+                st.session_state["cad_wpp"] = _fmt_wpp
+        wpp_c = st.text_input("WhatsApp", key="cad_wpp", placeholder="(48) 9 0000-0000")
+        _dig_wpp = ''.join(c for c in wpp_c if c.isdigit())
+        if wpp_c.strip() and len(_dig_wpp) == 11:
+            st.success("✅ WhatsApp válido")
+    email_c = st.text_input("E-mail", key="cad_email", placeholder="exemplo@email.com")
+    if email_c.strip() and '@' in email_c and '.' in email_c.split('@')[-1]:
+        st.success("✅ E-mail válido")
     foto_c  = st.file_uploader("Foto de perfil (opcional)",
                                 type=["jpg", "jpeg", "png"], key="cad_foto")
 
@@ -1240,7 +1376,8 @@ def _tab_gerador_treino():
                                  key="gt_tempo", format_func=lambda x: f"{x} minutos")
 
         equipamentos_sel = st.multiselect("Equipamentos disponíveis", EQUIPAMENTOS_OPCOES,
-                                          default=["Academia completa"], key="gt_equip")
+                                          default=["Academia completa"], key="gt_equip",
+                                          placeholder="Selecione as opções")
         equip_outro = ""
         if "Outro" in equipamentos_sel:
             equip_outro = st.text_input("Descreva o(s) equipamento(s) adicional(is):",
@@ -1784,11 +1921,15 @@ def _perfil_cliente_prof(slug):
         st.divider()
         with st.expander("✏️ Editar dados"):
             with st.form(key=f"edit_cad_{slug}"):
-                e_nome = st.text_input("Nome", value=cad.get("nome",""), key=f"e_nome_{slug}")
+                e_nome = st.text_input("Nome", value=cad.get("nome",""), key=f"e_nome_{slug}",
+                                       placeholder="Nome completo")
                 e_nasc = st.text_input("Data de nascimento (DD/MM/AAAA)",
-                                       value=cad.get("data_nascimento",""), key=f"e_nasc_{slug}")
-                e_wpp  = st.text_input("WhatsApp", value=cad.get("whatsapp",""), key=f"e_wpp_{slug}")
-                e_mail = st.text_input("E-mail", value=cad.get("email",""), key=f"e_mail_{slug}")
+                                       value=cad.get("data_nascimento",""), key=f"e_nasc_{slug}",
+                                       placeholder="DD/MM/AAAA")
+                e_wpp  = st.text_input("WhatsApp", value=cad.get("whatsapp",""), key=f"e_wpp_{slug}",
+                                       placeholder="(48) 9 0000-0000")
+                e_mail = st.text_input("E-mail", value=cad.get("email",""), key=f"e_mail_{slug}",
+                                       placeholder="exemplo@email.com")
                 if st.form_submit_button("Salvar alterações", type="primary"):
                     cad.update({"nome": e_nome.strip(), "data_nascimento": e_nasc.strip(),
                                 "whatsapp": e_wpp.strip(), "email": e_mail.strip()})
