@@ -719,16 +719,16 @@ def _pagina_home():
         <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
                     text-align:center; background:#f8f9fa; min-height:220px;">
             <div style="font-size:3.2rem; margin-bottom:0.6rem;">🧑‍🤸</div>
-            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Sou Aluno</h3>
+            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Área do Aluno</h3>
             <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
-                Preencha sua anamnese, envie fotos posturais e acompanhe seu progresso.
+                Acesse seu treino, check-in, anamnese, progresso e plano financeiro.
             </p>
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Sou Aluno", key="btn_home_aluno",
+        if st.button("Área do Aluno", key="btn_home_aluno",
                      use_container_width=True, type="primary"):
-            st.session_state['area'] = 'aluno'
+            st.session_state['area'] = 'aluno_login'
             st.rerun()
 
     with col2:
@@ -746,26 +746,6 @@ def _pagina_home():
         if st.button("Acesso Professora", key="btn_home_prof",
                      use_container_width=True):
             st.session_state['area'] = 'professora'
-            st.rerun()
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col_ll, col_login, col_rr = st.columns([1, 2, 1])
-    with col_login:
-        st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:14px; padding:1.6rem 1.2rem;
-                    text-align:center; background:#f8f9fa;">
-            <div style="font-size:2.8rem; margin-bottom:0.4rem;">🔑</div>
-            <h3 style="margin:0 0 0.4rem 0; font-size:1.1rem;">Aluno — Fazer Login</h3>
-            <p style="color:#666; font-size:0.85rem; margin:0;">
-                Acesse sua área com usuário e senha fornecidos pela professora.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Entrar como Aluno", key="btn_home_aluno_login",
-                     use_container_width=True):
-            st.session_state['area'] = 'aluno_login'
             st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -3389,6 +3369,7 @@ def _pagina_login_aluno():
 
     col_l, col_form, col_r = st.columns([1, 2, 1])
     with col_form:
+        # ── Login ────────────────────────────────────────────────────────────
         with st.form("login_aluno_form"):
             usuario = st.text_input("Usuário", placeholder="Ex: maria")
             senha   = st.text_input("Senha", type="password", placeholder="Ex: 1234maria")
@@ -3411,6 +3392,89 @@ def _pagina_login_aluno():
                         break
                 if not encontrado:
                     st.error("Usuário ou senha incorretos.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ── Primeiro acesso / Cadastro ────────────────────────────────────────
+        with st.expander("Primeiro acesso? Cadastre-se aqui"):
+            st.markdown("**Preencha os dados abaixo para criar seu acesso:**")
+            with st.form("cadastro_aluno_form"):
+                nome_cad  = st.text_input("Nome completo *", placeholder="Ex: Maria da Silva")
+                user_cad  = st.text_input("Usuário *",
+                                          placeholder="Ex: maria (sem espaços, sem acentos)")
+                senha_cad = st.text_input("Senha *", type="password",
+                                          placeholder="Mínimo 6 caracteres")
+                conf_cad  = st.text_input("Confirmar senha *", type="password")
+                cadastrar = st.form_submit_button("Criar acesso", use_container_width=True,
+                                                  type="primary")
+
+            if cadastrar:
+                erros_cad = []
+                _nome  = nome_cad.strip()
+                _user  = user_cad.strip().lower()
+                _senha = senha_cad.strip()
+                _conf  = conf_cad.strip()
+
+                if not _nome:
+                    erros_cad.append("Nome completo é obrigatório.")
+                if not _user:
+                    erros_cad.append("Usuário é obrigatório.")
+                elif " " in _user:
+                    erros_cad.append("Usuário não pode ter espaços.")
+                if len(_senha) < 6:
+                    erros_cad.append("Senha deve ter pelo menos 6 caracteres.")
+                if _senha != _conf:
+                    erros_cad.append("As senhas não coincidem.")
+
+                if not erros_cad:
+                    os.makedirs("dados_clientes", exist_ok=True)
+                    for _arq in glob.glob("dados_clientes/acesso_*.json"):
+                        _acc = _carregar_json(_arq, {})
+                        if _acc.get("usuario") == _user:
+                            erros_cad.append("Este usuário já está em uso. Escolha outro.")
+                            break
+
+                if erros_cad:
+                    for _e in erros_cad:
+                        st.error(_e)
+                else:
+                    _slug_novo  = _slug(_nome)
+                    _base_slug  = _slug_novo
+                    _cnt        = 1
+                    while os.path.exists(f"dados_clientes/acesso_{_slug_novo}.json"):
+                        _slug_novo = f"{_base_slug}_{_cnt}"
+                        _cnt += 1
+
+                    _salvar_json(f"dados_clientes/acesso_{_slug_novo}.json",
+                                 {"slug": _slug_novo, "usuario": _user, "senha": _senha})
+                    if not os.path.exists(_cadastro_path(_slug_novo)):
+                        _salvar_json(_cadastro_path(_slug_novo),
+                                     {"nome": _nome, "slug": _slug_novo})
+
+                    try:
+                        from config import EMAIL_REMETENTE, EMAIL_SENHA, EMAIL_DESTINATARIO
+                        if EMAIL_REMETENTE and EMAIL_SENHA:
+                            _msg_cad = MIMEMultipart()
+                            _msg_cad['From']    = EMAIL_REMETENTE
+                            _msg_cad['To']      = EMAIL_DESTINATARIO
+                            _msg_cad['Subject'] = f"Novo cadastro de aluno — {_nome}"
+                            _msg_cad.attach(MIMEText(
+                                f"Olá!\n\nUm novo aluno criou acesso no app:\n\n"
+                                f"Nome: {_nome}\nUsuário: {_user}\n\n"
+                                f"Acesse o painel da professora para configurar o perfil.",
+                                'plain', 'utf-8',
+                            ))
+                            with smtplib.SMTP('smtp.gmail.com', 587) as _srv_cad:
+                                _srv_cad.starttls()
+                                _srv_cad.login(EMAIL_REMETENTE, EMAIL_SENHA)
+                                _srv_cad.sendmail(EMAIL_REMETENTE, EMAIL_DESTINATARIO,
+                                                  _msg_cad.as_string())
+                    except Exception:
+                        pass
+
+                    st.session_state['aluno_logado_slug'] = _slug_novo
+                    st.session_state['area']              = 'aluno_logado'
+                    st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("← Voltar ao início", key="btn_voltar_login_aluno",
@@ -3742,12 +3806,27 @@ def _pagina_aluno_logado():
 
     st.divider()
 
-    tab_treino_a, tab_checkin_a, tab_feedback_a, tab_plano_a = st.tabs([
+    (tab_an_a, tab_post_a, tab_prog_a,
+     tab_treino_a, tab_checkin_a, tab_feedback_a, tab_plano_a) = st.tabs([
+        "📋  Anamnese",
+        "📸  Postural",
+        "📊  Progresso",
         "🏋️  Meu Treino",
         "📅  Check-in",
         "💬  Feedback",
         "💳  Meu Plano",
     ])
+
+    with tab_an_a:
+        _pagina_anamnese()
+
+    with tab_post_a:
+        _pagina_upload_postural()
+
+    with tab_prog_a:
+        if not st.session_state.get('cliente_slug'):
+            st.session_state['cliente_slug'] = slug
+        _pagina_portal_cliente()
 
     with tab_treino_a:
         _tab_aluno_meu_treino(slug)
@@ -3940,8 +4019,6 @@ if 'autenticado' not in st.session_state:
 _area = st.session_state['area']
 if _area is None:
     _pagina_home()
-elif _area == 'aluno':
-    _pagina_aluno()
 elif _area == 'aluno_login':
     _pagina_login_aluno()
 elif _area == 'aluno_logado':
