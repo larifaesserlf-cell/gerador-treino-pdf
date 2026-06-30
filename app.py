@@ -302,6 +302,18 @@ def _acesso_path(slug):    return f"dados_clientes/acesso_{slug}.json"
 def _checkins_path(slug):  return f"dados_clientes/checkins_{slug}.json"
 def _feedback_path(slug):  return f"dados_clientes/feedback_{slug}.json"
 def _treino_path(slug):    return f"dados_clientes/treino_{slug}.json"
+def _financeiro_path(slug): return f"dados_clientes/financeiro_{slug}.json"
+def _pagamentos_path(slug): return f"dados_clientes/pagamentos_{slug}.json"
+_DESPESAS_PATH = "dados_clientes/despesas.json"
+
+_TIPOS_CONTRATO = {
+    "Plano 3 meses":  "plano_3",
+    "Plano 6 meses":  "plano_6",
+    "Plano 12 meses": "plano_12",
+    "Avulso":         "avulso",
+}
+_FORMAS_PAGAMENTO = ["PIX", "Transferência", "Dinheiro", "Cartão"]
+_CATEGORIAS_DESP  = ["Tecnologia", "Marketing", "Equipamento", "Outros"]
 
 
 def _semana_atual():
@@ -447,6 +459,68 @@ def _chart_medidas(registros, height=350):
     )
     fig.update_xaxes(tickangle=-30)
     return fig
+
+
+# ── Helpers: financeiro ───────────────────────────────────────────────────────
+
+def _calcular_vencimento(data_inicio_str):
+    try:
+        d = date.fromisoformat(data_inicio_str)
+    except Exception:
+        d = date.today()
+    return (d + timedelta(days=30)).isoformat()
+
+
+def _avancar_vencimento(venc_str):
+    try:
+        d = date.fromisoformat(venc_str)
+    except Exception:
+        d = date.today()
+    return (d + timedelta(days=30)).isoformat()
+
+
+def _status_fin(fin, pags):
+    """(status, days) — status: sem_contrato | inativo | pago | atrasado | vence_em_breve | ok"""
+    if not fin:
+        return "sem_contrato", None
+    if fin.get("status") != "ativo":
+        return "inativo", None
+    hoje = date.today()
+    mes_atual = f"{hoje.year}-{hoje.month:02d}"
+    pago_mes = any(p.get("data", "").startswith(mes_atual) for p in pags)
+    if pago_mes:
+        return "pago", None
+    venc_str = fin.get("data_vencimento", "")
+    if not venc_str:
+        return "ok", None
+    try:
+        venc = date.fromisoformat(venc_str)
+    except Exception:
+        return "ok", None
+    delta = (venc - hoje).days
+    if delta < -3:
+        return "atrasado", abs(delta)
+    if delta <= 5:
+        return "vence_em_breve", max(delta, 0)
+    return "ok", delta
+
+
+def _proximo_num_recibo(slug):
+    n = len(_carregar_json(_pagamentos_path(slug), [])) + 1
+    return f"REC-{slug[:4].upper()}-{n:04d}"
+
+
+def _fmt_data_br(iso_str):
+    try:
+        return date.fromisoformat(iso_str).strftime("%d/%m/%Y")
+    except Exception:
+        return iso_str or "—"
+
+
+def _tipo_label(tipo_key):
+    mapa = {"plano_3": "Plano 3m", "plano_6": "Plano 6m",
+            "plano_12": "Plano 12m", "avulso": "Avulso"}
+    return mapa.get(tipo_key, tipo_key)
 
 
 # ── Constantes ────────────────────────────────────────────────────────────────
@@ -2306,13 +2380,14 @@ def _perfil_cliente_prof(slug):
     with col_ti:
         st.markdown(f"#### {nome_c}")
 
-    tab_dados, tab_treino_c, tab_med, tab_prog, tab_checkin_prof, tab_feedback_prof = st.tabs([
+    tab_dados, tab_treino_c, tab_med, tab_prog, tab_checkin_prof, tab_feedback_prof, tab_fin_cli = st.tabs([
         "👤  Dados Pessoais",
         "🏋️  Treino",
         "📏  Medidas e Evolução",
         "📈  Progresso",
         "📅  Check-ins",
         "💬  Feedbacks",
+        "💰  Financeiro",
     ])
 
     # ── Aba: Dados Pessoais ───────────────────────────────────────────────────
@@ -2755,6 +2830,449 @@ def _perfil_cliente_prof(slug):
                 st.markdown("#### Evolução Humor / Dor")
                 st.plotly_chart(fig_fb, use_container_width=True,
                                 key=f"fb_chart_{slug}")
+
+    # ── Aba: Financeiro (perfil do cliente) ───────────────────────────────────
+    with tab_fin_cli:
+        _fin_contrato_cliente(slug)
+
+
+# ── Módulo financeiro ─────────────────────────────────────────────────────────
+
+def _fin_contrato_cliente(slug):
+    """Seção de contrato financeiro exibida dentro do perfil do cliente."""
+    fin = _carregar_json(_financeiro_path(slug), {})
+    pags = _carregar_json(_pagamentos_path(slug), [])
+    status, delta = _status_fin(fin, pags)
+
+    if fin:
+        label_status = {"ativo": "🟢 Ativo", "pausado": "🟡 Pausado",
+                        "encerrado": "⚫ Encerrado"}.get(fin.get("status", ""), "—")
+        st.markdown(
+            f'<div style="background:#f4f4f4;border-radius:8px;padding:10px 14px;margin-bottom:12px;">'
+            f'<b>Contrato atual:</b> {_tipo_label(fin.get("tipo",""))} &nbsp;|&nbsp; '
+            f'R$ {float(fin.get("valor",0)):,.2f}/mês &nbsp;|&nbsp; '
+            f'Início: {_fmt_data_br(fin.get("data_inicio",""))} &nbsp;|&nbsp; '
+            f'Vencimento: {_fmt_data_br(fin.get("data_vencimento",""))} &nbsp;|&nbsp; '
+            f'Status: {label_status}</div>',
+            unsafe_allow_html=True,
+        )
+
+    with st.expander("✏️ Cadastrar / Editar contrato", expanded=not bool(fin)):
+        tipo_labels = list(_TIPOS_CONTRATO.keys())
+        tipo_atual  = next((k for k, v in _TIPOS_CONTRATO.items()
+                            if v == fin.get("tipo")), tipo_labels[0])
+        with st.form(key=f"form_fin_{slug}"):
+            tipo_sel  = st.selectbox("Tipo de contrato", tipo_labels,
+                                     index=tipo_labels.index(tipo_atual),
+                                     key=f"fin_tipo_{slug}")
+            valor_sel = st.number_input("Valor mensal (R$)", min_value=0.0, step=10.0,
+                                        value=float(fin.get("valor", 0.0)),
+                                        key=f"fin_valor_{slug}")
+            data_ini_def = fin.get("data_inicio", date.today().isoformat())
+            data_ini_sel = st.date_input("Data de início", value=date.fromisoformat(data_ini_def),
+                                         key=f"fin_ini_{slug}")
+            status_opts  = ["ativo", "pausado", "encerrado"]
+            status_sel   = st.selectbox("Status", status_opts,
+                                        index=status_opts.index(fin.get("status", "ativo")),
+                                        key=f"fin_status_{slug}")
+            if st.form_submit_button("💾 Salvar contrato", type="primary",
+                                     use_container_width=True):
+                data_ini_iso = data_ini_sel.isoformat()
+                venc_atual   = fin.get("data_vencimento", "") if fin else ""
+                nova_venc    = venc_atual if venc_atual else _calcular_vencimento(data_ini_iso)
+                novo_fin = {
+                    "tipo":            _TIPOS_CONTRATO[tipo_sel],
+                    "valor":           valor_sel,
+                    "data_inicio":     data_ini_iso,
+                    "data_vencimento": nova_venc,
+                    "status":          status_sel,
+                }
+                _salvar_json(_financeiro_path(slug), novo_fin)
+                st.success("Contrato salvo!")
+                st.rerun()
+
+
+def _fin_registrar_pagamento(slug):
+    cad  = _carregar_json(_cadastro_path(slug), {})
+    fin  = _carregar_json(_financeiro_path(slug), {})
+    nome = cad.get("nome", slug)
+
+    if st.button("← Voltar ao Financeiro", key="fin_volta_reg"):
+        st.session_state.pop("fin_reg_slug", None)
+        st.rerun()
+
+    st.markdown(f"### Registrar Pagamento — {nome}")
+    if fin:
+        st.caption(
+            f"Contrato: {_tipo_label(fin.get('tipo',''))} · "
+            f"R$ {float(fin.get('valor',0)):,.2f} · "
+            f"Vencimento: {_fmt_data_br(fin.get('data_vencimento',''))}"
+        )
+    st.divider()
+
+    with st.form("form_reg_pag"):
+        data_pag  = st.date_input("Data do pagamento", value=date.today())
+        valor_pag = st.number_input("Valor recebido (R$)", min_value=0.0, step=10.0,
+                                    value=float(fin.get("valor", 0.0)) if fin else 0.0)
+        forma_pag = st.selectbox("Forma de pagamento", _FORMAS_PAGAMENTO)
+        obs_pag   = st.text_input("Observações (opcional)")
+        confirmar = st.form_submit_button("✅ Confirmar pagamento", type="primary",
+                                          use_container_width=True)
+
+    if confirmar:
+        num_recibo = _proximo_num_recibo(slug)
+        pags = _carregar_json(_pagamentos_path(slug), [])
+        pags.append({
+            "id":    num_recibo,
+            "data":  data_pag.isoformat(),
+            "valor": valor_pag,
+            "forma": forma_pag,
+            "obs":   obs_pag,
+        })
+        _salvar_json(_pagamentos_path(slug), pags)
+
+        if fin:
+            nova_venc = _avancar_vencimento(fin.get("data_vencimento", date.today().isoformat()))
+            fin["data_vencimento"] = nova_venc
+            _salvar_json(_financeiro_path(slug), fin)
+
+        st.success(f"Pagamento registrado! Recibo: **{num_recibo}**")
+
+        # Gerar recibo para download
+        try:
+            from gerar_pdf_financeiro import gerar_recibo
+            mes_ref = data_pag.strftime("%B/%Y").capitalize()
+            recibo_bytes = gerar_recibo({
+                "numero":  num_recibo,
+                "cliente": nome,
+                "servico": _tipo_label(fin.get("tipo", "")) if fin else "Serviço avulso",
+                "periodo": mes_ref,
+                "valor":   valor_pag,
+                "data":    data_pag.strftime("%d/%m/%Y"),
+                "forma":   forma_pag,
+                "obs":     obs_pag,
+            })
+            st.download_button(
+                "📄 Baixar Recibo",
+                data=recibo_bytes,
+                file_name=f"recibo_{num_recibo}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.warning(f"Pagamento salvo, mas erro ao gerar recibo: {e}")
+
+
+def _fin_historico(slug):
+    cad  = _carregar_json(_cadastro_path(slug), {})
+    nome = cad.get("nome", slug)
+
+    if st.button("← Voltar ao Financeiro", key="fin_volta_hist"):
+        st.session_state.pop("fin_hist_slug", None)
+        st.rerun()
+
+    st.markdown(f"### Histórico de Pagamentos — {nome}")
+    pags = _carregar_json(_pagamentos_path(slug), [])
+
+    if not pags:
+        st.info("Nenhum pagamento registrado ainda.")
+        return
+
+    total = sum(float(p.get("valor", 0)) for p in pags)
+    st.metric("Total pago até hoje", f"R$ {total:,.2f}")
+    st.divider()
+
+    rows = []
+    for p in reversed(pags):
+        rows.append({
+            "Recibo":  p.get("id", "—"),
+            "Data":    _fmt_data_br(p.get("data", "")),
+            "Valor":   f"R$ {float(p.get('valor', 0)):,.2f}",
+            "Forma":   p.get("forma", ""),
+            "Obs":     p.get("obs", ""),
+        })
+    st.dataframe(rows, use_container_width=True, hide_index=True)
+
+
+def _fin_visao_geral():
+    hoje      = date.today()
+    mes_atual = f"{hoje.year}-{hoje.month:02d}"
+    todos     = _todos_cadastros()
+
+    ativos_n, receita_prev, recebido_mes, pendente_mes = 0, 0.0, 0.0, 0.0
+    linhas = []
+
+    for cad in todos:
+        slug_c = cad.get("slug", _slug(cad.get("nome", "")))
+        fin    = _carregar_json(_financeiro_path(slug_c), {})
+        pags   = _carregar_json(_pagamentos_path(slug_c), [])
+        if not fin:
+            continue
+
+        status, delta = _status_fin(fin, pags)
+        valor = float(fin.get("valor", 0))
+
+        if fin.get("status") == "ativo":
+            ativos_n     += 1
+            receita_prev += valor
+
+        pags_mes    = [p for p in pags if p.get("data", "").startswith(mes_atual)]
+        rec_cliente = sum(float(p.get("valor", 0)) for p in pags_mes)
+        recebido_mes += rec_cliente
+
+        if status in ("atrasado", "vence_em_breve"):
+            pendente_mes += max(valor - rec_cliente, 0)
+
+        linhas.append((cad.get("nome", slug_c), fin, pags, status, delta, slug_c))
+
+    # Cards
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Clientes ativos",     str(ativos_n))
+    c2.metric("Receita prevista/mês", f"R$ {receita_prev:,.2f}")
+    c3.metric("Recebido este mês",    f"R$ {recebido_mes:,.2f}")
+    c4.metric("Pendente este mês",    f"R$ {pendente_mes:,.2f}")
+
+    st.divider()
+
+    if not linhas:
+        st.info("Nenhum contrato cadastrado. Acesse o perfil de um cliente para cadastrar o contrato.")
+        return
+
+    # Gráfico de receita mensal (últimos 6 meses)
+    if _HAS_PLOTLY:
+        meses, valores_meses = [], []
+        for i in range(5, -1, -1):
+            d  = date(hoje.year, hoje.month, 1) - timedelta(days=i * 30)
+            mk = f"{d.year}-{d.month:02d}"
+            total_m = 0.0
+            for cad in todos:
+                slug_c = cad.get("slug", _slug(cad.get("nome", "")))
+                pags_c = _carregar_json(_pagamentos_path(slug_c), [])
+                total_m += sum(float(p.get("valor", 0)) for p in pags_c
+                               if p.get("data", "").startswith(mk))
+            meses.append(f"{d.month:02d}/{d.year}")
+            valores_meses.append(total_m)
+
+        fig_rev = go.Figure(go.Bar(
+            x=meses, y=valores_meses, marker_color="#333333",
+            text=[f"R$ {v:,.0f}" for v in valores_meses],
+            textposition="outside",
+        ))
+        fig_rev.update_layout(
+            title="Receita recebida — últimos 6 meses",
+            xaxis_title="Mês", yaxis_title="R$",
+            plot_bgcolor="white", paper_bgcolor="white",
+            margin=dict(l=40, r=20, t=40, b=40), height=280,
+        )
+        st.plotly_chart(fig_rev, use_container_width=True, key="fin_chart_receita")
+        st.divider()
+
+    # Tabela de clientes
+    st.markdown("#### Status de Pagamentos")
+    for nome_c, fin, pags, status, delta, slug_c in sorted(
+        linhas, key=lambda x: (0 if x[3] == "atrasado" else 1 if x[3] == "vence_em_breve" else 2)
+    ):
+        if status == "atrasado":
+            bg     = "#fde8e8"
+            emoji  = "🔴"
+            label  = f"Atrasado {delta}d"
+        elif status == "vence_em_breve":
+            bg     = "#fff9e6"
+            emoji  = "🟡"
+            label  = f"Vence em {delta}d" if delta > 0 else "Vence hoje"
+        elif status == "pago":
+            bg     = "#e8f5e9"
+            emoji  = "🟢"
+            label  = "Pago"
+        elif status == "inativo":
+            bg     = "#f0f0f0"
+            emoji  = "⚫"
+            label  = fin.get("status", "inativo").capitalize()
+        else:
+            bg     = "#f9f9f9"
+            emoji  = "⚪"
+            label  = "Em dia"
+
+        venc_fmt = _fmt_data_br(fin.get("data_vencimento", ""))
+        valor    = float(fin.get("valor", 0))
+
+        st.markdown(
+            f'<div style="background:{bg};border-radius:6px;padding:8px 14px;margin-bottom:4px;">'
+            f'<b>{nome_c}</b> &nbsp;·&nbsp; {_tipo_label(fin.get("tipo",""))} '
+            f'&nbsp;·&nbsp; R$ {valor:,.2f} &nbsp;·&nbsp; Venc: {venc_fmt} '
+            f'&nbsp;·&nbsp; {emoji} {label}</div>',
+            unsafe_allow_html=True,
+        )
+        col_r, col_h = st.columns(2)
+        with col_r:
+            if st.button("Registrar pagamento", key=f"fin_btn_reg_{slug_c}",
+                         use_container_width=True):
+                st.session_state["fin_reg_slug"] = slug_c
+                st.rerun()
+        with col_h:
+            if st.button("Ver histórico", key=f"fin_btn_hist_{slug_c}",
+                         use_container_width=True):
+                st.session_state["fin_hist_slug"] = slug_c
+                st.rerun()
+        st.write("")
+
+
+def _fin_despesas():
+    desp = _carregar_json(_DESPESAS_PATH, [])
+    hoje = date.today()
+    mes_atual = f"{hoje.year}-{hoje.month:02d}"
+
+    st.markdown("#### Registrar Despesa")
+    with st.form("form_despesa"):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            data_d    = st.date_input("Data", value=hoje)
+            valor_d   = st.number_input("Valor (R$)", min_value=0.0, step=5.0)
+        with col_b:
+            cat_d     = st.selectbox("Categoria", _CATEGORIAS_DESP)
+            desc_d    = st.text_input("Descrição", placeholder="Ex: Plataforma Streamlit")
+        if st.form_submit_button("➕ Adicionar despesa", type="primary",
+                                 use_container_width=True):
+            desp.append({
+                "data":      data_d.isoformat(),
+                "descricao": desc_d,
+                "valor":     valor_d,
+                "categoria": cat_d,
+            })
+            _salvar_json(_DESPESAS_PATH, desp)
+            st.success("Despesa registrada!")
+            st.rerun()
+
+    st.divider()
+    desp_mes = [d for d in desp if d.get("data", "").startswith(mes_atual)]
+    total_mes = sum(float(d.get("valor", 0)) for d in desp_mes)
+
+    st.markdown(f"#### Despesas de {hoje.strftime('%B/%Y').capitalize()}")
+    st.metric("Total do mês", f"R$ {total_mes:,.2f}")
+
+    if desp_mes:
+        rows = []
+        for d in sorted(desp_mes, key=lambda x: x.get("data", ""), reverse=True):
+            rows.append({
+                "Data":       _fmt_data_br(d.get("data", "")),
+                "Descrição":  d.get("descricao", ""),
+                "Categoria":  d.get("categoria", ""),
+                "Valor":      f"R$ {float(d.get('valor', 0)):,.2f}",
+            })
+        st.dataframe(rows, use_container_width=True, hide_index=True)
+    else:
+        st.info("Nenhuma despesa registrada este mês.")
+
+    with st.expander("📋 Todas as despesas"):
+        if desp:
+            all_rows = []
+            for d in sorted(desp, key=lambda x: x.get("data", ""), reverse=True):
+                all_rows.append({
+                    "Data":      _fmt_data_br(d.get("data", "")),
+                    "Descrição": d.get("descricao", ""),
+                    "Categoria": d.get("categoria", ""),
+                    "Valor":     f"R$ {float(d.get('valor', 0)):,.2f}",
+                })
+            st.dataframe(all_rows, use_container_width=True, hide_index=True)
+        else:
+            st.info("Nenhuma despesa registrada.")
+
+
+def _fin_relatorio():
+    hoje = date.today()
+    st.markdown("#### Gerar Relatório Mensal")
+
+    col_m, col_a = st.columns(2)
+    with col_m:
+        meses_pt = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+        mes_sel  = st.selectbox("Mês", meses_pt, index=hoje.month - 1)
+    with col_a:
+        ano_sel = st.number_input("Ano", min_value=2024, max_value=2030,
+                                  value=hoje.year, step=1)
+
+    mes_num = meses_pt.index(mes_sel) + 1
+    mes_key = f"{int(ano_sel)}-{mes_num:02d}"
+    mes_ref = f"{mes_sel}/{int(ano_sel)}"
+
+    if st.button("📄 Gerar Relatório PDF", type="primary", use_container_width=True):
+        todos = _todos_cadastros()
+        desp  = _carregar_json(_DESPESAS_PATH, [])
+
+        ativos_n, receita_prev, receita_rec = 0, 0.0, 0.0
+        pagamentos_mes, inadimplentes = [], []
+
+        for cad in todos:
+            slug_c = cad.get("slug", _slug(cad.get("nome", "")))
+            fin    = _carregar_json(_financeiro_path(slug_c), {})
+            pags   = _carregar_json(_pagamentos_path(slug_c), [])
+            if not fin:
+                continue
+
+            if fin.get("status") == "ativo":
+                ativos_n     += 1
+                receita_prev += float(fin.get("valor", 0))
+
+            pags_m = [p for p in pags if p.get("data", "").startswith(mes_key)]
+            for p in pags_m:
+                pagamentos_mes.append({
+                    "nome":  cad.get("nome", slug_c),
+                    "valor": p.get("valor", 0),
+                    "data":  _fmt_data_br(p.get("data", "")),
+                    "forma": p.get("forma", ""),
+                })
+                receita_rec += float(p.get("valor", 0))
+
+            status, delta = _status_fin(fin, pags)
+            if status == "atrasado" and not pags_m:
+                inadimplentes.append({
+                    "nome":        cad.get("nome", slug_c),
+                    "valor":       fin.get("valor", 0),
+                    "dias_atraso": delta or 0,
+                })
+
+        desp_mes = [d for d in desp if d.get("data", "").startswith(mes_key)]
+
+        try:
+            from gerar_pdf_financeiro import gerar_relatorio_mensal
+            pdf_bytes = gerar_relatorio_mensal({
+                "mes_ref":          mes_ref,
+                "clientes_ativos":  ativos_n,
+                "receita_prevista": receita_prev,
+                "receita_recebida": receita_rec,
+                "pagamentos":       pagamentos_mes,
+                "inadimplentes":    inadimplentes,
+                "despesas":         desp_mes,
+            })
+            st.download_button(
+                f"📥 Baixar Relatório {mes_ref}",
+                data=pdf_bytes,
+                file_name=f"relatorio_{mes_num:02d}_{int(ano_sel)}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+        except Exception as e:
+            st.error(f"Erro ao gerar relatório: {e}")
+
+
+def _tab_financeiro():
+    if st.session_state.get("fin_reg_slug"):
+        _fin_registrar_pagamento(st.session_state["fin_reg_slug"])
+        return
+    if st.session_state.get("fin_hist_slug"):
+        _fin_historico(st.session_state["fin_hist_slug"])
+        return
+
+    st.markdown("### 💰 Financeiro")
+    sub_geral, sub_desp, sub_rel = st.tabs([
+        "📊  Visão Geral", "💸  Despesas", "📄  Relatório Mensal",
+    ])
+    with sub_geral:
+        _fin_visao_geral()
+    with sub_desp:
+        _fin_despesas()
+    with sub_rel:
+        _fin_relatorio()
 
 
 def _tab_clientes():
@@ -3282,12 +3800,13 @@ def _pagina_professora():
 
     st.divider()
 
-    tab_treino, tab_anamneses, tab_postural, tab_cli, tab_videos = st.tabs([
+    tab_treino, tab_anamneses, tab_postural, tab_cli, tab_videos, tab_fin = st.tabs([
         "🏋️  Gerador de Treino",
         "📋  Anamneses Recebidas",
         "📸  Avaliação Postural",
         "👥  Clientes",
         "🎬  Vídeos",
+        "💰  Financeiro",
     ])
 
     with tab_treino:
@@ -3304,6 +3823,9 @@ def _pagina_professora():
 
     with tab_videos:
         _tab_videos_prof()
+
+    with tab_fin:
+        _tab_financeiro()
 
 
 # ── Roteamento principal ──────────────────────────────────────────────────────
