@@ -350,8 +350,11 @@ def _carregar_videos():
 
 
 def _salvar_videos(videos):
+    from video_exercicios import VIDEOS_EXERCICIOS as _base
+    # Só persiste entradas que diferem do base (evita sobrescrever base com "")
+    to_save = {k: v for k, v in videos.items() if v != _base.get(k, "")}
     with open(_VIDEOS_JSON, "w", encoding="utf-8") as f:
-        json.dump(videos, f, ensure_ascii=False, indent=2)
+        json.dump(to_save, f, ensure_ascii=False, indent=2)
 
 
 def _youtube_id(url):
