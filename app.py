@@ -3623,6 +3623,104 @@ def _tab_aluno_feedback(slug):
 
 # ── Página: Aluno Logado ──────────────────────────────────────────────────────
 
+# ── Aba: Meu Plano — financeiro do aluno ─────────────────────────────────────
+
+def _tab_aluno_meu_plano(slug):
+    fin  = _carregar_json(_financeiro_path(slug), {})
+    pags = _carregar_json(_pagamentos_path(slug), [])
+
+    if not fin:
+        st.info("Seu plano ainda não foi configurado. Entre em contato com a professora.")
+        return
+
+    status, delta = _status_fin(fin, pags)
+    valor  = float(fin.get("valor", 0))
+    tipo   = _tipo_label(fin.get("tipo", ""))
+    venc   = _fmt_data_br(fin.get("data_vencimento", ""))
+
+    # ── Card de status ────────────────────────────────────────────────────────
+    if status == "pago":
+        bg, emoji, label = "#e8f5e9", "🟢", "Em dia — pagamento confirmado"
+    elif status == "vence_em_breve":
+        dias_txt = "hoje" if delta == 0 else f"em {delta} dia{'s' if delta != 1 else ''}"
+        bg, emoji, label = "#fff9e6", "🟡", f"Vence {dias_txt}"
+    elif status == "atrasado":
+        bg, emoji, label = "#fde8e8", "🔴", f"Pagamento em atraso ({delta} dia{'s' if delta != 1 else ''})"
+    elif status == "inativo":
+        bg, emoji, label = "#f0f0f0", "⚫", fin.get("status", "inativo").capitalize()
+    else:
+        bg, emoji, label = "#f4f4f4", "⚪", "Em dia"
+
+    st.markdown(
+        f'<div style="background:{bg};border-radius:10px;padding:16px 20px;margin-bottom:16px;">'
+        f'<div style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">{emoji} {label}</div>'
+        f'<div style="color:#555;font-size:0.95rem;">'
+        f'<b>Plano:</b> {tipo} &nbsp;·&nbsp; <b>Valor:</b> R$ {valor:,.2f}/mês'
+        f'</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    # ── Próximo vencimento ────────────────────────────────────────────────────
+    st.markdown("#### Próximo Vencimento")
+    col_v, col_val = st.columns(2)
+    col_v.metric("Data", venc)
+    col_val.metric("Valor", f"R$ {valor:,.2f}")
+
+    st.divider()
+
+    # ── Histórico de pagamentos ───────────────────────────────────────────────
+    st.markdown("#### Histórico de Pagamentos")
+
+    if not pags:
+        st.info("Nenhum pagamento registrado ainda.")
+        return
+
+    for p in reversed(pags):
+        num     = p.get("id", "—")
+        data_p  = _fmt_data_br(p.get("data", ""))
+        valor_p = float(p.get("valor", 0))
+        forma_p = p.get("forma", "—")
+        obs_p   = p.get("obs", "")
+
+        col_info, col_dl = st.columns([4, 1])
+        with col_info:
+            st.markdown(
+                f'<div style="background:#f9f9f9;border-radius:6px;'
+                f'padding:8px 14px;margin-bottom:4px;">'
+                f'<b>{data_p}</b> &nbsp;·&nbsp; R$ {valor_p:,.2f} '
+                f'&nbsp;·&nbsp; {forma_p}'
+                + (f' &nbsp;·&nbsp; <i>{obs_p}</i>' if obs_p else '') +
+                f'<br><span style="color:#999;font-size:0.8rem;">{num}</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        with col_dl:
+            try:
+                from gerar_pdf_financeiro import gerar_recibo
+                cad    = _carregar_json(_cadastro_path(slug), {})
+                mes_r  = date.fromisoformat(p["data"]).strftime("%B/%Y").capitalize() if p.get("data") else "—"
+                r_bytes = gerar_recibo({
+                    "numero":  num,
+                    "cliente": cad.get("nome", slug),
+                    "servico": _tipo_label(fin.get("tipo", "")),
+                    "periodo": mes_r,
+                    "valor":   valor_p,
+                    "data":    data_p,
+                    "forma":   forma_p,
+                    "obs":     obs_p,
+                })
+                st.download_button(
+                    "📄 Recibo",
+                    data=r_bytes,
+                    file_name=f"recibo_{num}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key=f"dl_recibo_aluno_{num}",
+                )
+            except Exception:
+                pass
+
+
 def _pagina_aluno_logado():
     slug  = st.session_state.get('aluno_logado_slug', '')
     cad   = _carregar_json(_cadastro_path(slug), {})
@@ -3644,10 +3742,11 @@ def _pagina_aluno_logado():
 
     st.divider()
 
-    tab_treino_a, tab_checkin_a, tab_feedback_a = st.tabs([
+    tab_treino_a, tab_checkin_a, tab_feedback_a, tab_plano_a = st.tabs([
         "🏋️  Meu Treino",
         "📅  Check-in",
         "💬  Feedback",
+        "💳  Meu Plano",
     ])
 
     with tab_treino_a:
@@ -3658,6 +3757,9 @@ def _pagina_aluno_logado():
 
     with tab_feedback_a:
         _tab_aluno_feedback(slug)
+
+    with tab_plano_a:
+        _tab_aluno_meu_plano(slug)
 
 
 # ── Página: Aluno ────────────────────────────────────────────────────────────
