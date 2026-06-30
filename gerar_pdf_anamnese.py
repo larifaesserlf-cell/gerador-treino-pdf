@@ -36,7 +36,7 @@ CINZA_SEP   = HexColor('#E8E8E8')
 CINZA_ROD   = HexColor('#666666')
 CINZA_SUB   = HexColor('#888888')
 CINZA_TH    = HexColor('#1A1A1A')
-ROXO        = HexColor('#7C4DFF')
+VERMELHO    = HexColor('#C0392B')
 AMARELO_AV  = HexColor('#FFF3CD')
 TEXTO_AV    = HexColor('#856404')
 
@@ -63,7 +63,7 @@ def _estilos():
         'hdr_sub':    ps('AHdrSub',    fontName=FONTE_N, fontSize=9,
                          textColor=CINZA_SUB, alignment=TA_CENTER, spaceBefore=2),
         'sec_titulo': ps('ASecTit',    fontName=FONTE_B, fontSize=11,
-                         textColor=ROXO, spaceBefore=14, spaceAfter=4),
+                         textColor=VERMELHO, spaceBefore=14, spaceAfter=4),
         'lbl':        ps('ALbl',       fontName=FONTE_B, fontSize=8,
                          textColor=CINZA_MEIO, leading=12),
         'val':        ps('AVal',       fontName=FONTE_N, fontSize=8,

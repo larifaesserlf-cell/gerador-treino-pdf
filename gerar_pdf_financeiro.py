@@ -16,7 +16,7 @@ CINZA_ESC = colors.HexColor("#666666")
 CINZA_MED = colors.HexColor("#888888")
 CINZA_CLR = colors.HexColor("#E8E8E8")
 CINZA_PAR = colors.HexColor("#FAFAFA")
-ROXO      = colors.HexColor("#7C4DFF")
+VERMELHO  = colors.HexColor("#C0392B")
 BRANCO    = colors.white
 
 PAGE_W, PAGE_H = A4
@@ -26,7 +26,7 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 _titulo = ParagraphStyle("ft", fontName="Helvetica-Bold", fontSize=16,
                          textColor=PRETO, spaceAfter=2)
 _sub    = ParagraphStyle("fs", fontName="Helvetica-Bold", fontSize=11,
-                         textColor=ROXO, spaceAfter=6, spaceBefore=12)
+                         textColor=VERMELHO, spaceAfter=6, spaceBefore=12)
 _body   = ParagraphStyle("fb", fontName="Helvetica", fontSize=9,
                          textColor=CINZA_ESC, spaceAfter=3)
 _small  = ParagraphStyle("fsm", fontName="Helvetica", fontSize=8,

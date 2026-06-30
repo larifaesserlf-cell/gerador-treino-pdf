@@ -40,6 +40,14 @@ st.set_page_config(
 
 st.markdown("""
 <style>
+/* ── Fundo principal ─────────────────────────────────────────────────── */
+.stApp {
+    background-color: #F8F5F0 !important;
+}
+.main .block-container {
+    background-color: #F8F5F0 !important;
+}
+
 /* ── Sidebar escura ──────────────────────────────────────────────────── */
 [data-testid="stSidebar"],
 [data-testid="stSidebarContent"],
@@ -66,11 +74,11 @@ st.markdown("""
     font-weight: 400 !important;
 }
 [data-testid="stSidebar"] .stRadio > div > div[role="radio"][aria-checked="true"] {
-    background: rgba(124,77,255,0.15) !important;
-    border-left: 3px solid #7C4DFF !important;
+    background: rgba(192,57,43,0.15) !important;
+    border-left: 3px solid #C0392B !important;
 }
 [data-testid="stSidebar"] .stRadio > div > div[role="radio"][aria-checked="true"] label {
-    color: #A78BFF !important;
+    color: #E8896A !important;
     font-weight: 600 !important;
 }
 [data-testid="stSidebar"] .stRadio > div > div[role="radio"]:hover label {
@@ -93,7 +101,7 @@ st.markdown("""
 /* ── Botões principais ────────────────────────────────────────────────── */
 div[data-testid="stButton"] > button,
 div[data-testid="stFormSubmitButton"] > button {
-    background-color: #7C4DFF !important;
+    background-color: #C0392B !important;
     color: #FFFFFF !important;
     border: none !important;
     border-radius: 20px !important;
@@ -102,21 +110,21 @@ div[data-testid="stFormSubmitButton"] > button {
 }
 div[data-testid="stButton"] > button:hover,
 div[data-testid="stFormSubmitButton"] > button:hover {
-    background-color: #6B3EE6 !important;
+    background-color: #A93226 !important;
     color: #FFFFFF !important;
 }
 
-/* Botões de download — outline roxo */
+/* Botões de download — outline vermelho */
 div[data-testid="stDownloadButton"] > button {
     background-color: #FFFFFF !important;
-    color: #7C4DFF !important;
-    border: 1.5px solid #7C4DFF !important;
+    color: #C0392B !important;
+    border: 1.5px solid #C0392B !important;
     border-radius: 20px !important;
     font-weight: 600 !important;
     font-size: 0.88rem !important;
 }
 div[data-testid="stDownloadButton"] > button:hover {
-    background-color: rgba(124,77,255,0.06) !important;
+    background-color: rgba(192,57,43,0.06) !important;
 }
 
 /* ── Abas internas ────────────────────────────────────────────────────── */
@@ -125,7 +133,7 @@ div[data-testid="stTabs"] [role="tab"] {
     font-weight: 500 !important;
 }
 div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-    color: #7C4DFF !important;
+    color: #C0392B !important;
     font-weight: 700 !important;
 }
 div[data-testid="stTabs"] [data-baseweb="tab-border"] {
@@ -136,6 +144,7 @@ div[data-testid="stTabs"] [data-baseweb="tab-border"] {
 .stTextInput input, .stTextArea textarea,
 input[type="text"], input[type="email"],
 input[type="number"], input[type="password"], textarea {
+    background-color: #FFFFFF !important;
     border-color: #E8E8E8 !important;
     border-radius: 8px !important;
     box-shadow: none !important;
@@ -506,7 +515,7 @@ def _chart_peso(registros, meta=None, height=300):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=datas, y=pesos, mode="lines+markers", name="Peso (kg)",
-        line=dict(color="#7C4DFF", width=2), marker=dict(size=6),
+        line=dict(color="#C0392B", width=2), marker=dict(size=6),
     ))
     if meta:
         fig.add_hline(
@@ -532,7 +541,7 @@ def _chart_medidas(registros, height=350):
         ("coxa_d",   "Coxa D. (cm)"),
         ("braco_d",  "Braço D. (cm)"),
     ]
-    CORES = ["#7C4DFF", "#5C3DC5", "#666666", "#888888", "#CCCCCC"]
+    CORES = ["#C0392B", "#A93226", "#666666", "#888888", "#CCCCCC"]
     datas = [r.get("data", "") for r in registros]
     fig = go.Figure()
     for (key, label), cor in zip(CAMPOS, CORES):
@@ -824,7 +833,7 @@ def _pagina_home():
             min-height: 160px;
         ">
             <div style="
-                width:36px; height:36px; background:#7C4DFF;
+                width:36px; height:36px; background:#C0392B;
                 border-radius:8px; margin-bottom:1rem;
                 display:flex; align-items:center; justify-content:center;
             ">
@@ -2867,7 +2876,7 @@ def _perfil_cliente_prof(slug):
                 st.markdown("#### Treinos por tipo")
                 fig_ci = go.Figure(go.Bar(
                     x=list(contagem.keys()), y=list(contagem.values()),
-                    marker_color="#7C4DFF",
+                    marker_color="#C0392B",
                 ))
                 fig_ci.update_layout(
                     xaxis_title="Treino", yaxis_title="Vezes",
@@ -2920,7 +2929,7 @@ def _perfil_cliente_prof(slug):
                 fig_fb = go.Figure()
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=humor_num, mode="lines+markers",
-                    name="Humor (1-5)", line=dict(color="#7C4DFF", width=2),
+                    name="Humor (1-5)", line=dict(color="#C0392B", width=2),
                 ))
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=dor_num, mode="lines+markers",
@@ -3920,7 +3929,7 @@ def _pagina_aluno_logado():
         st.markdown(f"""
         <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
             <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
-            <p style="color:#7C4DFF; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+            <p style="color:#C0392B; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Olá, {nome_c.split()[0]}!</p>
         </div>
         """, unsafe_allow_html=True)
@@ -4093,7 +4102,7 @@ def _pagina_professora():
         st.markdown("""
         <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
             <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
-            <p style="color:#7C4DFF; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+            <p style="color:#C0392B; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área da Professora</p>
         </div>
         """, unsafe_allow_html=True)

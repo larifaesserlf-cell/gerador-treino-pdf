@@ -38,7 +38,7 @@ CINZA_IMPAR = HexColor('#FFFFFF')
 CINZA_SEP   = HexColor('#E8E8E8')
 CINZA_ROD   = HexColor('#666666')
 CINZA_SUB   = HexColor('#888888')
-ROXO        = HexColor('#7C4DFF')
+VERMELHO    = HexColor('#C0392B')
 
 NOME_CONSULTORIA = 'Studio Personal Training'
 PAGE_W, PAGE_H   = A4

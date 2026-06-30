@@ -36,7 +36,7 @@ CINZA_ROD   = HexColor('#666666')
 CINZA_SUB   = HexColor('#888888')
 CINZA_TH    = HexColor('#1A1A1A')
 CINZA_FILL  = HexColor('#FAFAFA')
-ROXO        = HexColor('#7C4DFF')
+VERMELHO    = HexColor('#C0392B')
 
 NOME_CONSULTORIA = "Studio Personal Training"
 
@@ -78,7 +78,7 @@ def _estilos():
                          textColor=CINZA_SUB, alignment=TA_CENTER),
         # ── Seções ────────────────────────────────────────────────────────────
         'sec_titulo': ps('SecTitulo', fontName=FONTE_B, fontSize=12,
-                         textColor=ROXO, spaceBefore=14, spaceAfter=5),
+                         textColor=VERMELHO, spaceBefore=14, spaceAfter=5),
         'div_info':   ps('DivInfo',   fontName=FONTE_N, fontSize=9,
                          textColor=PRETO, spaceAfter=8),
         # ── Tabela de treino — header ─────────────────────────────────────────
