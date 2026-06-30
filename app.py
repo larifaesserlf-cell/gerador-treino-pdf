@@ -160,6 +160,10 @@ div[data-testid="stTabs"] [data-baseweb="tab-border"] {
 }
 
 /* ── Inputs e selects ────────────────────────────────────────────────── */
+input, textarea, select {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+}
 .stTextInput input, .stNumberInput input,
 .stTextArea textarea, input[type="text"],
 input[type="email"], input[type="number"],
@@ -169,6 +173,13 @@ input[type="password"], textarea {
     border: 1px solid #E8E8E8 !important;
     border-radius: 8px !important;
     box-shadow: none !important;
+}
+input::placeholder, textarea::placeholder,
+.stTextInput input::placeholder,
+.stNumberInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #AAAAAA !important;
+    opacity: 1 !important;
 }
 
 /* ── Expanders ───────────────────────────────────────────────────────── */
