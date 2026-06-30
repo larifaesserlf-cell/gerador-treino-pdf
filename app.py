@@ -354,12 +354,33 @@ def _salvar_videos(videos):
         json.dump(videos, f, ensure_ascii=False, indent=2)
 
 
+def _youtube_id(url):
+    import re
+    m = re.search(
+        r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
+        url,
+    )
+    return m.group(1) if m else None
+
+
 def _exibir_video_exercicio(nome_ex, videos):
     url = videos.get(nome_ex, "")
     if not url:
         return
     with st.expander("▶ Ver execução", expanded=False):
-        st.video(url)
+        vid_id = _youtube_id(url)
+        if vid_id:
+            import streamlit.components.v1 as components
+            components.html(
+                f'<iframe width="100%" height="315" '
+                f'src="https://www.youtube.com/embed/{vid_id}" '
+                f'frameborder="0" allow="accelerometer; autoplay; clipboard-write; '
+                f'encrypted-media; gyroscope; picture-in-picture" allowfullscreen>'
+                f'</iframe>',
+                height=330,
+            )
+        elif os.path.exists(url):
+            st.video(url)
 
 
 def _todos_cadastros():
