@@ -2037,6 +2037,237 @@ def _tab_avaliacao_postural():
 
 # ── Tab: Clientes (professora) ────────────────────────────────────────────────
 
+def _form_treino_cliente(slug, cad):
+    nome_c = cad.get("nome", "")
+    pk     = f"gtc_{slug}"
+
+    # Calcular idade a partir da data de nascimento
+    idade_calc = 30
+    nasc_str = cad.get("data_nascimento", "")
+    if nasc_str:
+        try:
+            d_n, m_n, a_n = nasc_str.strip().split("/")
+            nasc_d = date(int(a_n), int(m_n), int(d_n))
+            hoje_d = date.today()
+            idade_calc = hoje_d.year - nasc_d.year - (
+                (hoje_d.month, hoje_d.day) < (nasc_d.month, nasc_d.day)
+            )
+            idade_calc = max(10, min(100, idade_calc))
+        except Exception:
+            pass
+
+    # Puxar dados da anamnese mais recente
+    anam_files = sorted(glob.glob(f"dados_clientes/anamnese_{slug}_*.json"), reverse=True)
+    restricoes_anam = ""
+    sexo_anam       = None
+    if anam_files:
+        anam = _carregar_json(anam_files[0], {})
+        restricoes_anam = anam.get("historico_saude", {}).get("lesoes", "")
+        sexo_anam       = anam.get("dados_pessoais", {}).get("sexo", None)
+
+    # Determinar sexo padrão
+    if sexo_anam and "masc" in sexo_anam.lower():
+        sexo_default_idx = 1
+    else:
+        sexo_default_idx = 0
+
+    # Último peso registrado
+    medidas_c  = _carregar_json(_medidas_path(slug), [])
+    pesos_j_c  = _carregar_json(_peso_path(slug), [])
+    peso_val   = 70.0
+    if medidas_c and medidas_c[-1].get("peso"):
+        peso_val = float(medidas_c[-1]["peso"])
+    elif pesos_j_c:
+        peso_val = float(pesos_j_c[-1].get("peso", 70.0))
+
+    # Treino atual
+    treino_atual = _carregar_json(_treino_path(slug), {})
+    if treino_atual:
+        obj_at  = treino_atual.get("dados", {}).get("objetivo", "")
+        gen_at  = treino_atual.get("gerado_em", "")[:10]
+        st.info(
+            f"✅ Treino ativo: **{obj_at.replace('_',' ').title()}** — gerado em {gen_at}. "
+            "Gerar um novo vai substituí-lo."
+        )
+
+    with st.expander("📋 Dados do Cliente", expanded=True):
+        nome = st.text_input("Nome completo", value=nome_c, key=f"{pk}_nome")
+
+        col_idade, col_sexo = st.columns([1, 2])
+        with col_idade:
+            idade = st.number_input("Idade", min_value=10, max_value=100,
+                                    value=idade_calc, step=1, key=f"{pk}_idade")
+        with col_sexo:
+            sexo_label = st.radio("Sexo", ["Feminino", "Masculino"],
+                                  horizontal=True, index=sexo_default_idx,
+                                  key=f"{pk}_sexo")
+        sexo = "F" if sexo_label == "Feminino" else "M"
+
+        col_peso, col_altura = st.columns(2)
+        with col_peso:
+            peso = st.number_input("Peso (kg)", min_value=30.0, max_value=300.0,
+                                   value=peso_val, step=0.5, format="%.1f", key=f"{pk}_peso")
+        with col_altura:
+            altura = st.number_input("Altura (cm)", min_value=100, max_value=250,
+                                     value=170, step=1, key=f"{pk}_altura")
+
+        col_data, col_periodo = st.columns(2)
+        with col_data:
+            data_inicio = st.date_input("Data de início", value=date.today(),
+                                        format="DD/MM/YYYY", key=f"{pk}_data")
+        with col_periodo:
+            periodo = st.selectbox("Período do plano (semanas)",
+                                   [4, 6, 8, 10, 12, 16], index=2, key=f"{pk}_periodo")
+
+        restricoes = st.text_area("Restrições / Lesões", value=restricoes_anam,
+                                  placeholder="Descreva lesões ou limitações",
+                                  height=80, key=f"{pk}_restricoes")
+
+    with st.expander("⚙️ Configuração do Treino", expanded=True):
+        col_obj, col_nivel = st.columns(2)
+        with col_obj:
+            objetivo_label = st.selectbox("Objetivo", list(OBJETIVOS.keys()),
+                                          key=f"{pk}_objetivo")
+        with col_nivel:
+            nivel_label = st.selectbox("Nível", list(NIVEIS.keys()), key=f"{pk}_nivel")
+
+        col_freq, col_tempo = st.columns(2)
+        with col_freq:
+            frequencia = st.selectbox("Frequência semanal", [2, 3, 4, 5, 6], index=2,
+                                      key=f"{pk}_freq",
+                                      format_func=lambda x: f"{x}x por semana")
+        with col_tempo:
+            tempo = st.selectbox("Tempo por sessão", [30, 45, 60, 75, 90], index=2,
+                                 key=f"{pk}_tempo",
+                                 format_func=lambda x: f"{x} minutos")
+
+        equipamentos_sel = st.multiselect("Equipamentos disponíveis", EQUIPAMENTOS_OPCOES,
+                                          default=["Academia completa"], key=f"{pk}_equip",
+                                          placeholder="Selecione as opções")
+        equip_outro = ""
+        if "Outro" in equipamentos_sel:
+            equip_outro = st.text_input("Descreva o(s) equipamento(s) adicional(is):",
+                                        placeholder="Ex: Kettlebell, TRX",
+                                        key=f"{pk}_equip_outro")
+
+        divisoes_map  = DIVISOES_F if sexo == "F" else DIVISOES_M
+        divisao_label = st.selectbox("Divisão de treino", list(divisoes_map.keys()),
+                                     key=f"{pk}_divisao")
+        period_label  = st.selectbox("Periodização", list(PERIODIZACOES.keys()),
+                                     key=f"{pk}_period")
+
+    st.divider()
+    col_l, col_btn, col_r = st.columns([1, 2, 1])
+    with col_btn:
+        primeiro = nome_c.split()[0] if nome_c else "Cliente"
+        gerar_clicado = st.button(f"🏋️  Gerar Treino — {primeiro}",
+                                  use_container_width=True, type="primary",
+                                  key=f"btn_gerar_{pk}")
+
+    if gerar_clicado:
+        erros = []
+        if not nome.strip():
+            erros.append("Informe o nome completo do cliente.")
+        if not equipamentos_sel:
+            erros.append("Selecione pelo menos um equipamento.")
+        if "Outro" in equipamentos_sel and not equip_outro.strip():
+            erros.append("Descreva o equipamento personalizado selecionado.")
+        if erros:
+            for e in erros:
+                st.error(e)
+            return
+
+        equip_str    = ", ".join(equip_outro.strip() if item == "Outro" else item
+                                 for item in equipamentos_sel)
+        objetivo     = OBJETIVOS[objetivo_label]
+        nivel        = NIVEIS[nivel_label]
+        divisao      = divisoes_map[divisao_label]
+        period_key   = PERIODIZACOES[period_label]
+
+        dados = {
+            'nome':         nome.strip(),
+            'idade':        int(idade),
+            'sexo':         sexo,
+            'peso':         float(peso),
+            'altura':       int(altura),
+            'objetivo':     objetivo,
+            'nivel':        nivel,
+            'divisao':      divisao,
+            'periodizacao': period_key,
+            'frequencia':   frequencia,
+            'tempo':        tempo,
+            'equipamentos': equip_str,
+            'restricoes':   restricoes.strip() if restricoes else "",
+            'data_inicio':  data_inicio.strftime("%d/%m/%Y"),
+            'periodo':      periodo,
+        }
+
+        sexo_key     = "masculino" if sexo == "M" else "feminino"
+        treinos_g    = EXERCICIOS[sexo_key][divisao]
+        descricoes_g = DESCRICOES_TREINO[sexo_key][divisao]
+        cardio_g     = CARDIO[objetivo]
+        progressao_g = PROGRESSAO[nivel]
+        periodizacao_g = PERIODIZACAO[period_key]
+        observacoes_g  = OBSERVACOES[objetivo]
+
+        data_hoje    = datetime.now().strftime("%Y-%m-%d")
+        nome_arquivo = f"{slug}_{data_hoje}.pdf"
+
+        with st.spinner("Gerando treino..."):
+            try:
+                tmp_path = os.path.join(tempfile.gettempdir(), nome_arquivo)
+                gerar_pdf(dados, treinos_g, descricoes_g,
+                          cardio_g, progressao_g, periodizacao_g, observacoes_g, tmp_path)
+                with open(tmp_path, "rb") as f:
+                    pdf_bytes = f.read()
+                os.unlink(tmp_path)
+            except Exception as exc:
+                st.error(f"Erro ao gerar o PDF: {exc}")
+                return
+
+        treino_json = {
+            "dados":      dados,
+            "treinos":    {k: list(v) for k, v in treinos_g.items()},
+            "descricoes": descricoes_g,
+            "gerado_em":  datetime.now().isoformat(),
+        }
+        _salvar_json(_treino_path(slug), treino_json)
+
+        st.session_state[f'{pk}_pdf_bytes']         = pdf_bytes
+        st.session_state[f'{pk}_pdf_nome']           = nome_arquivo
+        st.session_state[f'{pk}_pdf_objetivo_label'] = objetivo_label
+        st.session_state[f'{pk}_pdf_periodo']        = periodo
+        st.session_state[f'{pk}_mostrar_email']      = False
+
+    if st.session_state.get(f'{pk}_pdf_bytes'):
+        st.success("✅ Treino gerado! Já disponível na área do aluno.")
+        col_dl_l, col_dl, col_email, col_dl_r = st.columns([1, 2, 2, 1])
+        with col_dl:
+            st.download_button(
+                label="📥  Baixar PDF",
+                data=st.session_state[f'{pk}_pdf_bytes'],
+                file_name=st.session_state[f'{pk}_pdf_nome'],
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"btn_dl_{pk}",
+            )
+        with col_email:
+            if st.button("📧  Enviar por E-mail", use_container_width=True,
+                         key=f"btn_email_{pk}"):
+                st.session_state[f'{pk}_mostrar_email'] = True
+                st.rerun()
+
+        if st.session_state.get(f'{pk}_mostrar_email'):
+            st.divider()
+            _form_email_treino(
+                nome_c,
+                st.session_state[f'{pk}_pdf_objetivo_label'],
+                st.session_state[f'{pk}_pdf_periodo'],
+                st.session_state[f'{pk}_pdf_bytes'],
+                st.session_state[f'{pk}_pdf_nome'],
+            )
+
+
 def _perfil_cliente_prof(slug):
     cad      = _carregar_json(_cadastro_path(slug), {})
     nome_c   = cad.get("nome", slug)
@@ -2051,8 +2282,9 @@ def _perfil_cliente_prof(slug):
     with col_ti:
         st.markdown(f"#### {nome_c}")
 
-    tab_dados, tab_med, tab_prog, tab_checkin_prof, tab_feedback_prof = st.tabs([
+    tab_dados, tab_treino_c, tab_med, tab_prog, tab_checkin_prof, tab_feedback_prof = st.tabs([
         "👤  Dados Pessoais",
+        "🏋️  Treino",
         "📏  Medidas e Evolução",
         "📈  Progresso",
         "📅  Check-ins",
@@ -2181,6 +2413,10 @@ def _perfil_cliente_prof(slug):
                     _salvar_json(_cadastro_path(slug), cad)
                     st.success("✅ Dados atualizados!")
                     st.rerun()
+
+    # ── Aba: Treino ──────────────────────────────────────────────────────────
+    with tab_treino_c:
+        _form_treino_cliente(slug, cad)
 
     # ── Aba: Medidas e Evolução ───────────────────────────────────────────────
     with tab_med:
