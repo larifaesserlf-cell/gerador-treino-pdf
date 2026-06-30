@@ -31,13 +31,13 @@ def _registrar_fontes():
 
 FONTE_N, FONTE_B = _registrar_fontes()
 
-PRETO       = HexColor('#1A1A1A')
-CINZA_MEIO  = HexColor('#595959')
-CINZA_PAR   = HexColor('#F4F4F4')
-CINZA_IMPAR = HexColor('#EAEAEA')
-CINZA_SEP   = HexColor('#CCCCCC')
-CINZA_ROD   = HexColor('#999999')
-CINZA_SUB   = HexColor('#AAAAAA')
+PRETO       = HexColor('#1E1C1A')
+CINZA_MEIO  = HexColor('#5C5248')
+CINZA_PAR   = HexColor('#F0EAE0')
+CINZA_IMPAR = HexColor('#E8E0D4')
+CINZA_SEP   = HexColor('#A89880')
+CINZA_ROD   = HexColor('#5C5248')
+CINZA_SUB   = HexColor('#A89880')
 
 NOME_CONSULTORIA = 'Studio Personal Training'
 PAGE_W, PAGE_H   = A4

@@ -11,11 +11,11 @@ from reportlab.platypus import (
     HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
-PRETO     = colors.HexColor("#1a1a1a")
-CINZA_ESC = colors.HexColor("#3d3d3d")
-CINZA_MED = colors.HexColor("#7a7a7a")
-CINZA_CLR = colors.HexColor("#e8e8e8")
-CINZA_PAR = colors.HexColor("#f4f4f4")
+PRETO     = colors.HexColor("#1E1C1A")
+CINZA_ESC = colors.HexColor("#2E2B27")
+CINZA_MED = colors.HexColor("#5C5248")
+CINZA_CLR = colors.HexColor("#A89880")
+CINZA_PAR = colors.HexColor("#F0EAE0")
 BRANCO    = colors.white
 
 PAGE_W, PAGE_H = A4

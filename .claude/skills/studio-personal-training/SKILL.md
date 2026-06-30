@@ -64,16 +64,18 @@ treino-pdf/
 
 ## 3. Padrões Obrigatórios do Projeto
 
-### Identidade visual
+### Identidade visual — Paleta Grafite Âmbar
 | Uso | Cor |
 |---|---|
-| Headers / títulos | `#1A1A1A` (preto) |
-| Texto secundário | `#595959` (cinza escuro) |
-| Linhas ímpares de tabela | `#F4F4F4` (cinza claro) |
-| Linhas pares de tabela | `#EAEAEA` (cinza) |
+| Headers / títulos | `#1E1C1A` (preto grafite) |
+| Botões / fundo escuro | `#2E2B27` (grafite médio) |
+| Texto secundário | `#5C5248` (grafite quente) |
+| Bordas / separadores / badges | `#A89880` (dourado suave) |
+| Fundos de card / linhas pares | `#F0EAE0` (fundo claro quente) |
+| Linhas ímpares de tabela | `#E8E0D4` (fundo quente escuro) |
 | Fundo geral | branco |
 
-**Não alterar** a paleta preta/cinza em nenhuma circunstância.
+**Não alterar** a paleta Grafite Âmbar em nenhuma circunstância.
 
 ### Datas
 - Sempre exibidas como `DD/MM/AAAA` na interface e nos PDFs
@@ -191,12 +193,16 @@ pdf_bytes = buf.getvalue()
 st.download_button("Baixar PDF", data=pdf_bytes, file_name="arquivo.pdf", mime="application/pdf")
 ```
 
-**Paleta ReportLab:**
+**Paleta ReportLab — Grafite Âmbar:**
 ```python
-PRETO      = colors.HexColor('#1A1A1A')
-CINZA_MEIO = colors.HexColor('#595959')
-CINZA_PAR  = colors.HexColor('#F4F4F4')
-CINZA_IMPAR= colors.HexColor('#EAEAEA')
+PRETO      = colors.HexColor('#1E1C1A')
+CINZA_MEIO = colors.HexColor('#5C5248')
+CINZA_PAR  = colors.HexColor('#F0EAE0')
+CINZA_IMPAR= colors.HexColor('#E8E0D4')
+CINZA_SEP  = colors.HexColor('#A89880')
+CINZA_ROD  = colors.HexColor('#5C5248')
+CINZA_SUB  = colors.HexColor('#A89880')
+CINZA_TH   = colors.HexColor('#2E2B27')
 ```
 
 ---

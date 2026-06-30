@@ -47,7 +47,7 @@ st.markdown("""
         height: 3em; font-size: 1em; font-weight: 600;
     }
     .subtitulo {
-        color: #555555; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
+        color: #5C5248; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
     }
     input[type="text"], input[type="email"], input[type="number"],
     textarea, .stTextInput input, .stTextArea textarea {
@@ -416,11 +416,11 @@ def _chart_peso(registros, meta=None, height=300):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=datas, y=pesos, mode="lines+markers", name="Peso (kg)",
-        line=dict(color="#333333", width=2), marker=dict(size=6),
+        line=dict(color="#2E2B27", width=2), marker=dict(size=6),
     ))
     if meta:
         fig.add_hline(
-            y=float(meta), line_dash="dash", line_color="#888888",
+            y=float(meta), line_dash="dash", line_color="#A89880",
             annotation_text=f"Meta: {meta} kg", annotation_position="top right",
         )
     fig.update_layout(
@@ -442,7 +442,7 @@ def _chart_medidas(registros, height=350):
         ("coxa_d",   "Coxa D. (cm)"),
         ("braco_d",  "Braço D. (cm)"),
     ]
-    CORES = ["#222222", "#555555", "#888888", "#aaaaaa", "#cccccc"]
+    CORES = ["#1E1C1A", "#2E2B27", "#5C5248", "#A89880", "#E8E0D4"]
     datas = [r.get("data", "") for r in registros]
     fig = go.Figure()
     for (key, label), cor in zip(CAMPOS, CORES):
@@ -717,7 +717,7 @@ def _pagina_home():
     with col1:
         st.markdown("""
         <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
-                    text-align:center; background:#f8f9fa; min-height:220px;">
+                    text-align:center; background:#F0EAE0; min-height:220px;">
             <div style="font-size:3.2rem; margin-bottom:0.6rem;">🧑‍🤸</div>
             <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Área do Aluno</h3>
             <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
@@ -734,7 +734,7 @@ def _pagina_home():
     with col2:
         st.markdown("""
         <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
-                    text-align:center; background:#f8f9fa; min-height:220px;">
+                    text-align:center; background:#F0EAE0; min-height:220px;">
             <div style="font-size:3.2rem; margin-bottom:0.6rem;">👩‍💼</div>
             <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Acesso Professora</h3>
             <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
@@ -1427,14 +1427,14 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
         nome_primeiro = nome.split()[0] if nome else nome
         corpo_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:24px 0;">
+<body style="margin:0;padding:0;background:#F0EAE0;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F0EAE0;padding:24px 0;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0"
        style="background:#ffffff;border-radius:8px;overflow:hidden;
               box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:600px;">
   <tr>
-    <td style="background:#111111;padding:28px 32px;text-align:center;">
+    <td style="background:#1E1C1A;padding:28px 32px;text-align:center;">
       <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">
         🏋️ Studio Personal Training
       </h1>
@@ -1442,46 +1442,46 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
   </tr>
   <tr>
     <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#222;margin:0 0 14px 0;">
+      <p style="font-size:16px;color:#1E1C1A;margin:0 0 14px 0;">
         Olá, <strong>{nome_primeiro}</strong>! 👋
       </p>
-      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 16px 0;">
+      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 16px 0;">
         Seu <strong>plano de treino personalizado</strong> está pronto!
         Preparamos com cuidado um programa completo pensado especialmente para você.
       </p>
       <table width="100%" cellpadding="0" cellspacing="0"
-             style="background:#f7f7f7;border-radius:6px;margin:20px 0;">
+             style="background:#F0EAE0;border-radius:6px;margin:20px 0;">
         <tr>
           <td style="padding:16px 22px;">
-            <p style="margin:5px 0;font-size:14px;color:#444;">
+            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
               <strong>🎯 Objetivo:</strong> {objetivo_label}
             </p>
-            <p style="margin:5px 0;font-size:14px;color:#444;">
+            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
               <strong>📅 Período do plano:</strong> {periodo} semanas
             </p>
-            <p style="margin:5px 0;font-size:14px;color:#444;">
+            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
               <strong>📎 Anexo:</strong> {nome_arquivo}
             </p>
           </td>
         </tr>
       </table>
-      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 16px 0;">
+      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 16px 0;">
         O PDF com todos os seus treinos, séries, repetições e orientações está
         em anexo. Abra, salve no celular e leve para a academia! 💪
       </p>
-      <p style="font-size:15px;color:#555;line-height:1.8;margin:0 0 6px 0;">
+      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 6px 0;">
         Qualquer dúvida é só me chamar. Vamos juntos nessa jornada!
       </p>
-      <p style="font-size:15px;color:#222;margin:0;">
+      <p style="font-size:15px;color:#1E1C1A;margin:0;">
         Com carinho,<br>
         <strong>Sua professora</strong> — Studio Personal Training
       </p>
     </td>
   </tr>
   <tr>
-    <td style="background:#f0f0f0;padding:18px 32px;text-align:center;
-               border-top:1px solid #e0e0e0;">
-      <p style="margin:0;font-size:12px;color:#999;">
+    <td style="background:#E8E0D4;padding:18px 32px;text-align:center;
+               border-top:1px solid #A89880;">
+      <p style="margin:0;font-size:12px;color:#5C5248;">
         Studio Personal Training &nbsp;|&nbsp; Este e-mail foi enviado automaticamente.
       </p>
     </td>
@@ -2742,7 +2742,7 @@ def _perfil_cliente_prof(slug):
                 st.markdown("#### Treinos por tipo")
                 fig_ci = go.Figure(go.Bar(
                     x=list(contagem.keys()), y=list(contagem.values()),
-                    marker_color="#333333",
+                    marker_color="#2E2B27",
                 ))
                 fig_ci.update_layout(
                     xaxis_title="Treino", yaxis_title="Vezes",
@@ -2795,11 +2795,11 @@ def _perfil_cliente_prof(slug):
                 fig_fb = go.Figure()
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=humor_num, mode="lines+markers",
-                    name="Humor (1-5)", line=dict(color="#333333", width=2),
+                    name="Humor (1-5)", line=dict(color="#2E2B27", width=2),
                 ))
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=dor_num, mode="lines+markers",
-                    name="Dor muscular (1-5)", line=dict(color="#888888", width=2, dash="dash"),
+                    name="Dor muscular (1-5)", line=dict(color="#A89880", width=2, dash="dash"),
                 ))
                 fig_fb.update_layout(
                     xaxis_title="Data", yaxis=dict(range=[0, 5.5]),
@@ -2828,7 +2828,7 @@ def _fin_contrato_cliente(slug):
         label_status = {"ativo": "🟢 Ativo", "pausado": "🟡 Pausado",
                         "encerrado": "⚫ Encerrado"}.get(fin.get("status", ""), "—")
         st.markdown(
-            f'<div style="background:#f4f4f4;border-radius:8px;padding:10px 14px;margin-bottom:12px;">'
+            f'<div style="background:#F0EAE0;border-radius:8px;padding:10px 14px;margin-bottom:12px;">'
             f'<b>Contrato atual:</b> {_tipo_label(fin.get("tipo",""))} &nbsp;|&nbsp; '
             f'R$ {float(fin.get("valor",0)):,.2f}/mês &nbsp;|&nbsp; '
             f'Início: {_fmt_data_br(fin.get("data_inicio",""))} &nbsp;|&nbsp; '
@@ -3034,7 +3034,7 @@ def _fin_visao_geral():
             valores_meses.append(total_m)
 
         fig_rev = go.Figure(go.Bar(
-            x=meses, y=valores_meses, marker_color="#333333",
+            x=meses, y=valores_meses, marker_color="#2E2B27",
             text=[f"R$ {v:,.0f}" for v in valores_meses],
             textposition="outside",
         ))
@@ -3065,11 +3065,11 @@ def _fin_visao_geral():
             emoji  = "🟢"
             label  = "Pago"
         elif status == "inativo":
-            bg     = "#f0f0f0"
+            bg     = "#E8E0D4"
             emoji  = "⚫"
             label  = fin.get("status", "inativo").capitalize()
         else:
-            bg     = "#f9f9f9"
+            bg     = "#F0EAE0"
             emoji  = "⚪"
             label  = "Em dia"
 
@@ -3337,7 +3337,7 @@ def _render_calendario_checkins(slug, ano, mes):
                 if tipo == 'treinou':
                     bg, icon = '#d4edda', '✅'
                 else:
-                    bg, icon = '#e9ecef', '😴'
+                    bg, icon = '#E8E0D4', '😴'
                 html += (
                     f'<td style="background:{bg};border-radius:6px;padding:5px 2px;">'
                     f'<div style="font-size:1rem;">{icon}</div>'
@@ -3711,9 +3711,9 @@ def _tab_aluno_meu_plano(slug):
     elif status == "atrasado":
         bg, emoji, label = "#fde8e8", "🔴", f"Pagamento em atraso ({delta} dia{'s' if delta != 1 else ''})"
     elif status == "inativo":
-        bg, emoji, label = "#f0f0f0", "⚫", fin.get("status", "inativo").capitalize()
+        bg, emoji, label = "#E8E0D4", "⚫", fin.get("status", "inativo").capitalize()
     else:
-        bg, emoji, label = "#f4f4f4", "⚪", "Em dia"
+        bg, emoji, label = "#F0EAE0", "⚪", "Em dia"
 
     st.markdown(
         f'<div style="background:{bg};border-radius:10px;padding:16px 20px;margin-bottom:16px;">'
@@ -3749,12 +3749,12 @@ def _tab_aluno_meu_plano(slug):
         col_info, col_dl = st.columns([4, 1])
         with col_info:
             st.markdown(
-                f'<div style="background:#f9f9f9;border-radius:6px;'
+                f'<div style="background:#F0EAE0;border-radius:6px;'
                 f'padding:8px 14px;margin-bottom:4px;">'
                 f'<b>{data_p}</b> &nbsp;·&nbsp; R$ {valor_p:,.2f} '
                 f'&nbsp;·&nbsp; {forma_p}'
                 + (f' &nbsp;·&nbsp; <i>{obs_p}</i>' if obs_p else '') +
-                f'<br><span style="color:#999;font-size:0.8rem;">{num}</span>'
+                f'<br><span style="color:#A89880;font-size:0.8rem;">{num}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )

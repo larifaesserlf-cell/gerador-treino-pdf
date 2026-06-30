@@ -53,9 +53,9 @@ O slug é gerado por `_slug(nome)`: ASCII lowercase, underscores, sem acentos.
 
 ## Convenções
 
-- **Identidade visual:** preto `#1A1A1A`, cinza escuro `#595959`, cinza claro `#F4F4F4`
+- **Identidade visual — Paleta Grafite Âmbar:** `#1E1C1A` (preto), `#2E2B27` (grafite médio), `#5C5248` (grafite quente / texto secundário), `#A89880` (dourado / bordas), `#F0EAE0` (fundo claro), `#E8E0D4` (fundo alternado)
 - **Datas:** exibidas sempre como `DD/MM/AAAA`; armazenadas internamente em ISO `YYYY-MM-DD`
-- **PDFs:** ReportLab com fonte Arial TTF (fallback Helvetica). Paleta preta e cinza
+- **PDFs:** ReportLab com fonte Arial TTF (fallback Helvetica). Paleta Grafite Âmbar
 - **Vídeos:** `_carregar_videos()` em `app.py` faz merge `{**_base, **runtime}`. `_salvar_videos()` só persiste entradas que diferem do base para não sobrescrever com `""`
 - **Nomes de exercícios:** usam `c/` (não "com"), ex: `"Supino Reto c/ Barra"` — verificar em `TODOS_EXERCICIOS` antes de cadastrar
 - **Plotly:** já importado condicionalmente (`_HAS_PLOTLY`). Usar `go.Figure()` e `st.plotly_chart(..., key=...)`

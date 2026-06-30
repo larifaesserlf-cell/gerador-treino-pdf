@@ -27,15 +27,15 @@ FONTE_N, FONTE_B = _registrar_fontes()
 
 # ── Paleta de cores ───────────────────────────────────────────────────────────
 
-PRETO       = HexColor('#1A1A1A')
-CINZA_MEIO  = HexColor('#595959')
-CINZA_PAR   = HexColor('#F4F4F4')
-CINZA_IMPAR = HexColor('#EAEAEA')
-CINZA_SEP   = HexColor('#CCCCCC')
-CINZA_ROD   = HexColor('#999999')
-CINZA_SUB   = HexColor('#AAAAAA')
-CINZA_TH    = HexColor('#333333')
-CINZA_FILL  = HexColor('#FAFAFA')
+PRETO       = HexColor('#1E1C1A')
+CINZA_MEIO  = HexColor('#5C5248')
+CINZA_PAR   = HexColor('#F0EAE0')
+CINZA_IMPAR = HexColor('#E8E0D4')
+CINZA_SEP   = HexColor('#A89880')
+CINZA_ROD   = HexColor('#5C5248')
+CINZA_SUB   = HexColor('#A89880')
+CINZA_TH    = HexColor('#2E2B27')
+CINZA_FILL  = HexColor('#F0EAE0')
 
 NOME_CONSULTORIA = "Studio Personal Training"
 
@@ -257,7 +257,7 @@ def _bloco_treino(letra, exercicios, est, descricao=""):
         ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
         ('LEFTPADDING',   (0, 0), (-1, -1), 4),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 4),
-        ('LINEBELOW',     (0, 0), (-1, -1), 0.3,  HexColor('#DDDDDD')),
+        ('LINEBELOW',     (0, 0), (-1, -1), 0.3,  HexColor('#A89880')),
         # Colunas de preenchimento manual com borda visível
         ('BOX',           (6, 1), (7, -1),  0.6,  HexColor('#AAAAAA')),
         ('LINEBEFORE',    (7, 1), (7, -1),  0.6,  HexColor('#AAAAAA')),
