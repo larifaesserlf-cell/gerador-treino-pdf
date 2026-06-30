@@ -13,6 +13,9 @@ __pycache__/
 # Dados de clientes — fichas e fotos nunca versionadas
 dados_clientes/
 
+# Vídeos de exercícios — só links do YouTube vão ao GitHub
+videos_exercicios/
+
 # Ambientes virtuais
 venv/
 .venv/

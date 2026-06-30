@@ -338,6 +338,30 @@ def _salvar_json(path, data):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+# ── Biblioteca de vídeos ──────────────────────────────────────────────────────
+
+_VIDEOS_JSON = "videos_exercicios.json"
+
+
+def _carregar_videos():
+    from video_exercicios import VIDEOS_EXERCICIOS as _base
+    runtime = _carregar_json(_VIDEOS_JSON, {})
+    return {**_base, **runtime}
+
+
+def _salvar_videos(videos):
+    with open(_VIDEOS_JSON, "w", encoding="utf-8") as f:
+        json.dump(videos, f, ensure_ascii=False, indent=2)
+
+
+def _exibir_video_exercicio(nome_ex, videos):
+    url = videos.get(nome_ex, "")
+    if not url:
+        return
+    with st.expander("▶ Ver execução", expanded=False):
+        st.video(url)
+
+
 def _todos_cadastros():
     os.makedirs("dados_clientes", exist_ok=True)
     result = []
@@ -2648,6 +2672,7 @@ def _tab_aluno_meu_treino(slug):
 
     st.divider()
 
+    _videos = _carregar_videos()
     for letra, exercicios in treinos_t.items():
         desc = descricoes_t.get(letra, f"Treino {letra}")
         with st.expander(f"**Treino {letra}** — {desc}", expanded=False):
@@ -2669,6 +2694,7 @@ def _tab_aluno_meu_treino(slug):
                     if metodo: info_parts.append(metodo)
                     if info_parts:
                         st.caption("  |  ".join(info_parts))
+                    _exibir_video_exercicio(nome_ex, _videos)
                 else:
                     st.markdown(f"**{i}.** {ex}")
 
@@ -2886,6 +2912,72 @@ def _pagina_aluno():
         _pagina_portal_cliente()
 
 
+# ── Aba: Vídeos (professora) ─────────────────────────────────────────────────
+
+def _tab_videos_prof():
+    from video_exercicios import TODOS_EXERCICIOS
+
+    st.markdown("### Biblioteca de Vídeos")
+    st.caption(
+        "Cole um link do YouTube ou envie um mp4 para cada exercício. "
+        "Os vídeos aparecem direto no treino online do aluno."
+    )
+
+    videos = _carregar_videos()
+
+    busca = st.text_input("🔍 Buscar exercício", "", key="busca_videos")
+    nomes = TODOS_EXERCICIOS
+    if busca:
+        nomes = [n for n in nomes if busca.strip().lower() in n.lower()]
+
+    com_video    = sum(1 for n in TODOS_EXERCICIOS if videos.get(n))
+    total        = len(TODOS_EXERCICIOS)
+    st.caption(f"✅ {com_video} de {total} exercícios com vídeo cadastrado")
+    st.divider()
+
+    for nome in nomes:
+        video_atual = videos.get(nome, "")
+        status = "✅" if video_atual else "⬜"
+
+        with st.expander(f"{status}  {nome}", expanded=False):
+            if video_atual:
+                st.caption(f"Atual: `{video_atual}`")
+
+            eh_youtube = "youtube" in video_atual or "youtu.be" in video_atual
+            novo_link = st.text_input(
+                "Link do YouTube",
+                value=video_atual if eh_youtube else "",
+                placeholder="https://www.youtube.com/watch?v=...",
+                key=f"yt_{nome}",
+            )
+            arquivo = st.file_uploader(
+                "Ou enviar vídeo local (mp4)",
+                type=["mp4"],
+                key=f"up_{nome}",
+            )
+
+            col_salvar, col_remover = st.columns([2, 1])
+            with col_salvar:
+                if st.button("💾 Salvar", key=f"btn_salvar_{nome}", use_container_width=True):
+                    if arquivo is not None:
+                        os.makedirs("videos_exercicios", exist_ok=True)
+                        safe = nome.replace("/", "-").replace(" ", "_")
+                        path_video = f"videos_exercicios/{safe}.mp4"
+                        with open(path_video, "wb") as fv:
+                            fv.write(arquivo.getvalue())
+                        videos[nome] = path_video
+                    elif novo_link.strip():
+                        videos[nome] = novo_link.strip()
+                    _salvar_videos(videos)
+                    st.success("Salvo!")
+                    st.rerun()
+            with col_remover:
+                if video_atual and st.button("🗑️ Remover", key=f"btn_rem_{nome}", use_container_width=True):
+                    videos[nome] = ""
+                    _salvar_videos(videos)
+                    st.rerun()
+
+
 # ── Página: Professora ────────────────────────────────────────────────────────
 
 def _pagina_professora():
@@ -2930,11 +3022,12 @@ def _pagina_professora():
 
     st.divider()
 
-    tab_treino, tab_anamneses, tab_postural, tab_cli = st.tabs([
+    tab_treino, tab_anamneses, tab_postural, tab_cli, tab_videos = st.tabs([
         "🏋️  Gerador de Treino",
         "📋  Anamneses Recebidas",
         "📸  Avaliação Postural",
         "👥  Clientes",
+        "🎬  Vídeos",
     ])
 
     with tab_treino:
@@ -2948,6 +3041,9 @@ def _pagina_professora():
 
     with tab_cli:
         _tab_clientes()
+
+    with tab_videos:
+        _tab_videos_prof()
 
 
 # ── Roteamento principal ──────────────────────────────────────────────────────
