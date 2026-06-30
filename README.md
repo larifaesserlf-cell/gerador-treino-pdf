@@ -1,71 +1,97 @@
-# Gerador de Plano de Treino em PDF
+# Studio Personal Training — Sistema de Gestão
 
-Gera fichas de treino personalizadas em PDF, prontas para entregar ao cliente.
+Sistema web completo para personal trainers gerenciarem clientes, gerar planos de treino em PDF, acompanhar evolução física e controlar o financeiro da consultoria.
 
-## Pré-requisitos
+**App publicado:** https://2rve8kptjdtf3tcvekxhc7.streamlit.app
 
-- Python 3.8 ou superior
+---
+
+## Funcionalidades
+
+### Área da Professora
+- **Gerador de treino em PDF** — planos personalizados por sexo, objetivo, nível, divisão e periodização
+- **Anamneses recebidas** — visualização e exportação em PDF das fichas dos alunos
+- **Avaliação postural** — upload de fotos com marcação de pontos e laudos em PDF
+- **Gestão de clientes** — cadastros, medidas corporais, evolução de peso, check-ins e feedbacks
+- **Biblioteca de vídeos** — associa vídeos do YouTube a cada exercício do banco
+- **Módulo financeiro** — contratos, registro de pagamentos, recibos PDF, despesas e relatório mensal
+
+### Área do Aluno (com login)
+- **Meu Treino** — visualização do treino gerado pela professora com vídeos de execução
+- **Check-in** — registro diário de treino com calendário visual
+- **Feedback semanal** — humor, dor muscular/articular, sono e observações
+
+### Área do Aluno (sem login)
+- **Anamnese** — ficha de anamnese completa com PAR-Q
+- **Avaliação Postural** — upload de fotos posturais
+- **Meu Progresso** — registro de medidas e peso com gráficos de evolução
+
+---
 
 ## Instalação
 
 ```bash
-pip install reportlab
-```
-
-## Como rodar — Interface Web (Streamlit)
-
-```bash
 pip install -r requirements.txt
-streamlit run app.py
 ```
 
-Abrirá automaticamente no navegador em `http://localhost:8501`.  
-Preencha o formulário e clique em **Gerar Treino em PDF** para baixar a ficha.
+---
 
-## Como rodar — Terminal (CLI legado)
+## Rodar localmente
 
 ```bash
-cd treino-pdf
-python main.py
+python -m streamlit run app.py
 ```
 
-O script fará perguntas no terminal e, ao final, salvará um arquivo `.pdf`
-na mesma pasta com o nome do cliente e a data (ex: `joao_silva_2026-06-24.pdf`).
+Acesse em: http://localhost:8501
 
-## O que o PDF contém
+---
 
-| Seção | Descrição |
-|---|---|
-| Cabeçalho | Nome do cliente, objetivo, data de geração |
-| Perfil do cliente | Todos os dados coletados + IMC calculado |
-| Plano de treino | Tabelas por treino (A/B/C/D) com exercícios, séries, reps e método |
-| Cardio / aeróbico | Protocolo específico para o objetivo |
-| Progressão de carga | Regras conforme o nível de experiência |
-| Observações gerais | Aquecimento, intervalos, nutrição, sono etc. |
+## Acesso
 
-## Divisões selecionadas automaticamente
-
-| Frequência | Nível | Divisão |
+| Área | Usuário | Senha |
 |---|---|---|
-| 2x/semana | qualquer | A/B |
-| 3x/semana | iniciante | Full Body |
-| 3x/semana | intermediário / avançado | A/B/C |
-| 4x ou mais | qualquer | A/B/C/D |
+| Professora | `admin` | `studio2026` |
+| Aluno (exemplo) | `larissa` | `0000larissa` |
 
-## Estrutura de arquivos
+> As credenciais dos alunos são geradas automaticamente pela professora no perfil de cada cliente.
+
+---
+
+## Estrutura de pastas
 
 ```
 treino-pdf/
-├── app.py          — interface web Streamlit
-├── main.py         — script CLI legado (entrada via terminal)
-├── gerar_pdf.py    — geração e layout do PDF com ReportLab
-├── exercicios.py   — banco de exercícios, cardio, progressão e observações
-├── requirements.txt
-└── README.md       — este arquivo
+├── app.py                    — aplicação principal (toda a lógica de UI e roteamento)
+├── exercicios.py             — banco de exercícios, cardio, progressão e observações
+├── video_exercicios.py       — mapeamento exercício → URL do YouTube
+├── videos_exercicios.json    — overrides de vídeos salvos pela professora em tempo de execução
+├── gerar_pdf.py              — geração do plano de treino em PDF (ReportLab)
+├── gerar_pdf_anamnese.py     — geração da ficha de anamnese em PDF
+├── gerar_pdf_postural.py     — geração do laudo postural em PDF
+├── gerar_pdf_progresso.py    — geração do relatório de progresso em PDF
+├── gerar_pdf_financeiro.py   — geração de recibos e relatório financeiro mensal em PDF
+├── config.py                 — credenciais de e-mail (NÃO versionado — ver .gitignore)
+├── requirements.txt          — dependências Python
+├── canvas_editor/
+│   └── index.html            — editor de marcação postural (HTML/JS standalone)
+├── dados_clientes/           — dados dos alunos (NÃO versionado — ver .gitignore)
+│   ├── cadastro_[slug].json
+│   ├── anamnese_[slug]_[data].json
+│   ├── medidas_[slug].json
+│   ├── peso_[slug].json
+│   ├── treino_[slug].json
+│   ├── checkins_[slug].json
+│   ├── feedback_[slug].json
+│   ├── acesso_[slug].json
+│   ├── financeiro_[slug].json
+│   ├── pagamentos_[slug].json
+│   └── despesas.json
+└── README.md
 ```
 
-## Personalizando
+---
 
-- **Nome da consultoria**: edite a variável `NOME_CONSULTORIA` em `gerar_pdf.py`.
-- **Exercícios**: adicione ou substitua entradas no dicionário `EXERCICIOS` em `exercicios.py`.
-- **Cores**: ajuste as constantes no topo de `gerar_pdf.py` (`PRETO`, `CINZA_PAR` etc.).
+## Deploy
+
+O app está hospedado no **Streamlit Community Cloud**.  
+Cada `git push origin master` atualiza o app publicado automaticamente em alguns minutos.
