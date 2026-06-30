@@ -27,15 +27,16 @@ FONTE_N, FONTE_B = _registrar_fontes()
 
 # ── Paleta de cores ───────────────────────────────────────────────────────────
 
-PRETO       = HexColor('#1E1C1A')
-CINZA_MEIO  = HexColor('#5C5248')
-CINZA_PAR   = HexColor('#F0EAE0')
-CINZA_IMPAR = HexColor('#E8E0D4')
-CINZA_SEP   = HexColor('#A89880')
-CINZA_ROD   = HexColor('#5C5248')
-CINZA_SUB   = HexColor('#A89880')
-CINZA_TH    = HexColor('#2E2B27')
-CINZA_FILL  = HexColor('#F0EAE0')
+PRETO       = HexColor('#1A1A1A')
+CINZA_MEIO  = HexColor('#666666')
+CINZA_PAR   = HexColor('#FAFAFA')
+CINZA_IMPAR = HexColor('#FFFFFF')
+CINZA_SEP   = HexColor('#E8E8E8')
+CINZA_ROD   = HexColor('#666666')
+CINZA_SUB   = HexColor('#888888')
+CINZA_TH    = HexColor('#1A1A1A')
+CINZA_FILL  = HexColor('#FAFAFA')
+ROXO        = HexColor('#7C4DFF')
 
 NOME_CONSULTORIA = "Studio Personal Training"
 
@@ -77,7 +78,7 @@ def _estilos():
                          textColor=CINZA_SUB, alignment=TA_CENTER),
         # ── Seções ────────────────────────────────────────────────────────────
         'sec_titulo': ps('SecTitulo', fontName=FONTE_B, fontSize=12,
-                         textColor=PRETO, spaceBefore=14, spaceAfter=5),
+                         textColor=ROXO, spaceBefore=14, spaceAfter=5),
         'div_info':   ps('DivInfo',   fontName=FONTE_N, fontSize=9,
                          textColor=PRETO, spaceAfter=8),
         # ── Tabela de treino — header ─────────────────────────────────────────

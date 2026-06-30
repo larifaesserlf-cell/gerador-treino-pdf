@@ -64,18 +64,19 @@ treino-pdf/
 
 ## 3. Padrões Obrigatórios do Projeto
 
-### Identidade visual — Paleta Grafite Âmbar
+### Identidade visual — estilo Sidebar Escura + Roxo
 | Uso | Cor |
 |---|---|
-| Headers / títulos | `#1E1C1A` (preto grafite) |
-| Botões / fundo escuro | `#2E2B27` (grafite médio) |
-| Texto secundário | `#5C5248` (grafite quente) |
-| Bordas / separadores / badges | `#A89880` (dourado suave) |
-| Fundos de card / linhas pares | `#F0EAE0` (fundo claro quente) |
-| Linhas ímpares de tabela | `#E8E0D4` (fundo quente escuro) |
-| Fundo geral | branco |
+| Sidebar / fundo escuro | `#1A1A1A` |
+| Fundo principal | `#FFFFFF` (branco) |
+| Cor de destaque (botões, links, badges) | `#7C4DFF` (roxo) |
+| Texto principal | `#1A1A1A` |
+| Texto secundário | `#666666` |
+| Bordas e separadores | `#E8E8E8` |
+| Cards (fundo) | `#FAFAFA` |
+| Roxo hover / links visitados | `#6B3EE6` |
 
-**Não alterar** a paleta Grafite Âmbar em nenhuma circunstância.
+**Não alterar** a paleta roxa/preta em nenhuma circunstância.
 
 ### Datas
 - Sempre exibidas como `DD/MM/AAAA` na interface e nos PDFs
@@ -193,16 +194,17 @@ pdf_bytes = buf.getvalue()
 st.download_button("Baixar PDF", data=pdf_bytes, file_name="arquivo.pdf", mime="application/pdf")
 ```
 
-**Paleta ReportLab — Grafite Âmbar:**
+**Paleta ReportLab:**
 ```python
-PRETO      = colors.HexColor('#1E1C1A')
-CINZA_MEIO = colors.HexColor('#5C5248')
-CINZA_PAR  = colors.HexColor('#F0EAE0')
-CINZA_IMPAR= colors.HexColor('#E8E0D4')
-CINZA_SEP  = colors.HexColor('#A89880')
-CINZA_ROD  = colors.HexColor('#5C5248')
-CINZA_SUB  = colors.HexColor('#A89880')
-CINZA_TH   = colors.HexColor('#2E2B27')
+PRETO      = colors.HexColor('#1A1A1A')
+CINZA_MEIO = colors.HexColor('#666666')
+CINZA_PAR  = colors.HexColor('#FAFAFA')
+CINZA_IMPAR= colors.HexColor('#FFFFFF')
+CINZA_SEP  = colors.HexColor('#E8E8E8')
+CINZA_ROD  = colors.HexColor('#666666')
+CINZA_SUB  = colors.HexColor('#888888')
+CINZA_TH   = colors.HexColor('#1A1A1A')
+ROXO       = colors.HexColor('#7C4DFF')   # títulos de seção
 ```
 
 ---

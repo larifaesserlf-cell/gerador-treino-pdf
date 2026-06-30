@@ -12,10 +12,11 @@ from reportlab.platypus import (
 )
 
 # ── Paleta ────────────────────────────────────────────────────────────────────
-PRETO     = colors.HexColor("#1E1C1A")
-CINZA_ESC = colors.HexColor("#2E2B27")
-CINZA_MED = colors.HexColor("#5C5248")
-CINZA_CLR = colors.HexColor("#A89880")
+PRETO     = colors.HexColor("#1A1A1A")
+CINZA_ESC = colors.HexColor("#666666")
+CINZA_MED = colors.HexColor("#888888")
+CINZA_CLR = colors.HexColor("#E8E8E8")
+ROXO      = colors.HexColor("#7C4DFF")
 BRANCO    = colors.white
 
 PAGE_W, PAGE_H = A4
@@ -54,9 +55,9 @@ def _chart_img_peso(registros, meta=None):
         xs, ys = zip(*pairs)
 
         fig, ax = plt.subplots(figsize=(7, 2.8))
-        ax.plot(xs, ys, marker="o", color="#2E2B27", linewidth=2, markersize=5)
+        ax.plot(xs, ys, marker="o", color="#7C4DFF", linewidth=2, markersize=5)
         if meta:
-            ax.axhline(float(meta), color="#A89880", linestyle="--", linewidth=1,
+            ax.axhline(float(meta), color="#888888", linestyle="--", linewidth=1,
                        label=f"Meta: {meta} kg")
             ax.legend(fontsize=8)
         ax.set_ylabel("kg", fontsize=8)
@@ -92,7 +93,7 @@ def _chart_img_medidas(registros):
             ("coxa_d",   "Coxa D."),
             ("braco_d",  "Braço D."),
         ]
-        CORES = ["#1E1C1A", "#2E2B27", "#5C5248", "#A89880", "#E8E0D4"]
+        CORES = ["#7C4DFF", "#5C3DC5", "#666666", "#888888", "#CCCCCC"]
 
         if not registros:
             return None

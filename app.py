@@ -40,20 +40,110 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    div[data-testid="stButton"] > button[kind="primary"] {
-        height: 3.2em; font-size: 1.05em; font-weight: 700; letter-spacing: 0.02em;
-    }
-    div[data-testid="stDownloadButton"] > button {
-        height: 3em; font-size: 1em; font-weight: 600;
-    }
-    .subtitulo {
-        color: #5C5248; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em;
-    }
-    input[type="text"], input[type="email"], input[type="number"],
-    textarea, .stTextInput input, .stTextArea textarea {
-        border-color: rgba(255,255,255,0.2) !important;
-        box-shadow: none !important;
-    }
+/* ── Sidebar escura ──────────────────────────────────────────────────── */
+[data-testid="stSidebar"],
+[data-testid="stSidebarContent"],
+[data-testid="stSidebar"] > div {
+    background-color: #1A1A1A !important;
+}
+[data-testid="stSidebar"] * { box-sizing: border-box; }
+
+/* Radio items — menu lateral */
+[data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"] {
+    padding: 9px 14px 9px 16px !important;
+    border-radius: 8px !important;
+    border-left: 3px solid transparent !important;
+    margin: 1px 6px !important;
+}
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"] > div:first-child {
+    display: none !important;
+}
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"] label {
+    color: #888888 !important;
+    font-size: 0.87rem !important;
+    cursor: pointer !important;
+    font-weight: 400 !important;
+}
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"][aria-checked="true"] {
+    background: rgba(124,77,255,0.15) !important;
+    border-left: 3px solid #7C4DFF !important;
+}
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"][aria-checked="true"] label {
+    color: #A78BFF !important;
+    font-weight: 600 !important;
+}
+[data-testid="stSidebar"] .stRadio > div > div[role="radio"]:hover label {
+    color: #CCCCCC !important;
+}
+
+/* Botão Sair na sidebar */
+[data-testid="stSidebar"] div[data-testid="stButton"] > button {
+    background-color: transparent !important;
+    color: #555555 !important;
+    border: 1px solid #333333 !important;
+    border-radius: 20px !important;
+    font-size: 0.82rem !important;
+}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
+    background-color: #2A2A2A !important;
+    color: #AAAAAA !important;
+}
+
+/* ── Botões principais ────────────────────────────────────────────────── */
+div[data-testid="stButton"] > button,
+div[data-testid="stFormSubmitButton"] > button {
+    background-color: #7C4DFF !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+}
+div[data-testid="stButton"] > button:hover,
+div[data-testid="stFormSubmitButton"] > button:hover {
+    background-color: #6B3EE6 !important;
+    color: #FFFFFF !important;
+}
+
+/* Botões de download — outline roxo */
+div[data-testid="stDownloadButton"] > button {
+    background-color: #FFFFFF !important;
+    color: #7C4DFF !important;
+    border: 1.5px solid #7C4DFF !important;
+    border-radius: 20px !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+}
+div[data-testid="stDownloadButton"] > button:hover {
+    background-color: rgba(124,77,255,0.06) !important;
+}
+
+/* ── Abas internas ────────────────────────────────────────────────────── */
+div[data-testid="stTabs"] [role="tab"] {
+    color: #666666 !important;
+    font-weight: 500 !important;
+}
+div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+    color: #7C4DFF !important;
+    font-weight: 700 !important;
+}
+div[data-testid="stTabs"] [data-baseweb="tab-border"] {
+    background-color: #E8E8E8 !important;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────── */
+.stTextInput input, .stTextArea textarea,
+input[type="text"], input[type="email"],
+input[type="number"], input[type="password"], textarea {
+    border-color: #E8E8E8 !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+/* ── Misc ─────────────────────────────────────────────────────────────── */
+.subtitulo { color: #666666; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em; }
+hr { border-color: #E8E8E8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -416,11 +506,11 @@ def _chart_peso(registros, meta=None, height=300):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=datas, y=pesos, mode="lines+markers", name="Peso (kg)",
-        line=dict(color="#2E2B27", width=2), marker=dict(size=6),
+        line=dict(color="#7C4DFF", width=2), marker=dict(size=6),
     ))
     if meta:
         fig.add_hline(
-            y=float(meta), line_dash="dash", line_color="#A89880",
+            y=float(meta), line_dash="dash", line_color="#888888",
             annotation_text=f"Meta: {meta} kg", annotation_position="top right",
         )
     fig.update_layout(
@@ -442,7 +532,7 @@ def _chart_medidas(registros, height=350):
         ("coxa_d",   "Coxa D. (cm)"),
         ("braco_d",  "Braço D. (cm)"),
     ]
-    CORES = ["#1E1C1A", "#2E2B27", "#5C5248", "#A89880", "#E8E0D4"]
+    CORES = ["#7C4DFF", "#5C3DC5", "#666666", "#888888", "#CCCCCC"]
     datas = [r.get("data", "") for r in registros]
     fig = go.Figure()
     for (key, label), cor in zip(CAMPOS, CORES):
@@ -702,61 +792,21 @@ def _exibir_anamnese_streamlit(dados):
 # ── Página: Home ──────────────────────────────────────────────────────────────
 
 def _pagina_home():
-    # ── Fundo escuro + estilo dos botões para esta página ────────────────────
-    st.markdown("""
-    <style>
-    [data-testid="stAppViewContainer"],
-    section[data-testid="stMain"],
-    section[data-testid="stMain"] > div:first-child,
-    [data-testid="stHeader"],
-    [data-testid="stToolbar"],
-    [data-testid="stDecoration"] {
-        background-color: #1E1C1A !important;
-    }
-    div[data-testid="stButton"] > button {
-        background-color: #5C5248 !important;
-        color: #F0EAE0 !important;
-        border: none !important;
-        font-size: 0.92rem !important;
-        font-weight: 600 !important;
-        letter-spacing: 0.06em !important;
-        border-radius: 6px !important;
-    }
-    div[data-testid="stButton"] > button:hover {
-        background-color: #2E2B27 !important;
-        color: #F0EAE0 !important;
-        border: none !important;
-    }
-    div[data-testid="stVerticalBlock"] {
-        gap: 0 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
     # ── Header ────────────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="text-align:center; padding: 4rem 0 3rem 0;">
-        <p style="
-            letter-spacing: 0.22em;
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: #F0EAE0;
+    <div style="text-align:center; padding: 5rem 0 3rem 0;">
+        <h1 style="
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: #1A1A1A;
+            letter-spacing: 0.06em;
             margin: 0;
+            text-transform: uppercase;
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            text-transform: uppercase;
-        ">Studio Personal Training</p>
-        <p style="
-            color: #A89880;
-            font-size: 0.82rem;
-            margin: 0.55rem 0 0 0;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-        ">Sistema de Gestão</p>
-        <div style="
-            width: 48px; height: 1px;
-            background: #5C5248;
-            margin: 2rem auto 0;
-        "></div>
+        ">Studio Personal Training</h1>
+        <p style="color:#666666; font-size:0.9rem; margin:0.5rem 0 0 0; letter-spacing:0.03em;">
+            Sistema de Gestão
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -766,29 +816,29 @@ def _pagina_home():
     with col1:
         st.markdown("""
         <div style="
-            background: #2E2B27;
-            border: 1px solid #5C5248;
-            border-radius: 10px;
-            padding: 2rem 1.6rem 1.2rem 1.6rem;
-            min-height: 190px;
+            background: #FAFAFA;
+            border: 1px solid #E8E8E8;
+            border-radius: 12px;
+            padding: 2rem 1.6rem 1.4rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            min-height: 160px;
         ">
-            <p style="color:#A89880; font-size:1.1rem; margin:0 0 0.9rem 0; line-height:1;">◈</p>
-            <p style="
-                color: #F0EAE0;
-                font-weight: 700;
-                font-size: 1.05rem;
-                margin: 0 0 0.55rem 0;
-                letter-spacing: 0.03em;
-            ">Área do Aluno</p>
-            <p style="
-                color: #A89880;
-                font-size: 0.85rem;
-                margin: 0;
-                line-height: 1.65;
-            ">Treino, check-in, anamnese, progresso e plano financeiro.</p>
+            <div style="
+                width:36px; height:36px; background:#7C4DFF;
+                border-radius:8px; margin-bottom:1rem;
+                display:flex; align-items:center; justify-content:center;
+            ">
+                <span style="color:#fff; font-size:1.1rem; line-height:1;">◉</span>
+            </div>
+            <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
+                Área do Aluno
+            </p>
+            <p style="color:#666666; font-size:0.85rem; margin:0; line-height:1.65;">
+                Treino, check-in, anamnese, progresso e plano financeiro.
+            </p>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<div style='height:0.55rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
         if st.button("Área do Aluno", key="btn_home_aluno", use_container_width=True):
             st.session_state['area'] = 'aluno_login'
             st.rerun()
@@ -796,44 +846,38 @@ def _pagina_home():
     with col2:
         st.markdown("""
         <div style="
-            background: #2E2B27;
-            border: 1px solid #5C5248;
-            border-radius: 10px;
-            padding: 2rem 1.6rem 1.2rem 1.6rem;
-            min-height: 190px;
+            background: #FAFAFA;
+            border: 1px solid #E8E8E8;
+            border-radius: 12px;
+            padding: 2rem 1.6rem 1.4rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            min-height: 160px;
         ">
-            <p style="color:#A89880; font-size:1.1rem; margin:0 0 0.9rem 0; line-height:1;">◈</p>
-            <p style="
-                color: #F0EAE0;
-                font-weight: 700;
-                font-size: 1.05rem;
-                margin: 0 0 0.55rem 0;
-                letter-spacing: 0.03em;
-            ">Área da Professora</p>
-            <p style="
-                color: #A89880;
-                font-size: 0.85rem;
-                margin: 0;
-                line-height: 1.65;
-            ">Clientes, anamneses, avaliação postural, treinos e financeiro.</p>
+            <div style="
+                width:36px; height:36px; background:#1A1A1A;
+                border-radius:8px; margin-bottom:1rem;
+                display:flex; align-items:center; justify-content:center;
+            ">
+                <span style="color:#fff; font-size:1.1rem; line-height:1;">◈</span>
+            </div>
+            <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
+                Área da Professora
+            </p>
+            <p style="color:#666666; font-size:0.85rem; margin:0; line-height:1.65;">
+                Clientes, anamneses, avaliação postural, treinos e financeiro.
+            </p>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<div style='height:0.55rem'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
         if st.button("Área da Professora", key="btn_home_prof", use_container_width=True):
             st.session_state['area'] = 'professora'
             st.rerun()
 
     # ── Rodapé ────────────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="text-align:center; padding: 3.5rem 0 1rem 0;">
-        <p style="
-            color: #5C5248;
-            font-size: 0.75rem;
-            letter-spacing: 0.1em;
-            margin: 0;
-            text-transform: uppercase;
-        ">Studio Personal Training — Sistema de Gestão</p>
-    </div>
+    <p style="text-align:center; color:#CCCCCC; font-size:0.75rem; margin-top:3rem;">
+        Studio Personal Training — Sistema de Gestão
+    </p>
     """, unsafe_allow_html=True)
 
 
@@ -1508,14 +1552,14 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
         nome_primeiro = nome.split()[0] if nome else nome
         corpo_html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#F0EAE0;font-family:Arial,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#F0EAE0;padding:24px 0;">
+<body style="margin:0;padding:0;background:#F5F5F5;font-family:Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F5;padding:24px 0;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0"
        style="background:#ffffff;border-radius:8px;overflow:hidden;
               box-shadow:0 2px 8px rgba(0,0,0,0.10);max-width:600px;">
   <tr>
-    <td style="background:#1E1C1A;padding:28px 32px;text-align:center;">
+    <td style="background:#1A1A1A;padding:28px 32px;text-align:center;">
       <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">
         🏋️ Studio Personal Training
       </h1>
@@ -1523,46 +1567,46 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
   </tr>
   <tr>
     <td style="padding:36px 40px;">
-      <p style="font-size:16px;color:#1E1C1A;margin:0 0 14px 0;">
+      <p style="font-size:16px;color:#1A1A1A;margin:0 0 14px 0;">
         Olá, <strong>{nome_primeiro}</strong>! 👋
       </p>
-      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 16px 0;">
+      <p style="font-size:15px;color:#666666;line-height:1.8;margin:0 0 16px 0;">
         Seu <strong>plano de treino personalizado</strong> está pronto!
         Preparamos com cuidado um programa completo pensado especialmente para você.
       </p>
       <table width="100%" cellpadding="0" cellspacing="0"
-             style="background:#F0EAE0;border-radius:6px;margin:20px 0;">
+             style="background:#FAFAFA;border:1px solid #E8E8E8;border-radius:6px;margin:20px 0;">
         <tr>
           <td style="padding:16px 22px;">
-            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
+            <p style="margin:5px 0;font-size:14px;color:#444444;">
               <strong>🎯 Objetivo:</strong> {objetivo_label}
             </p>
-            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
+            <p style="margin:5px 0;font-size:14px;color:#444444;">
               <strong>📅 Período do plano:</strong> {periodo} semanas
             </p>
-            <p style="margin:5px 0;font-size:14px;color:#2E2B27;">
+            <p style="margin:5px 0;font-size:14px;color:#444444;">
               <strong>📎 Anexo:</strong> {nome_arquivo}
             </p>
           </td>
         </tr>
       </table>
-      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 16px 0;">
+      <p style="font-size:15px;color:#666666;line-height:1.8;margin:0 0 16px 0;">
         O PDF com todos os seus treinos, séries, repetições e orientações está
         em anexo. Abra, salve no celular e leve para a academia! 💪
       </p>
-      <p style="font-size:15px;color:#5C5248;line-height:1.8;margin:0 0 6px 0;">
+      <p style="font-size:15px;color:#666666;line-height:1.8;margin:0 0 6px 0;">
         Qualquer dúvida é só me chamar. Vamos juntos nessa jornada!
       </p>
-      <p style="font-size:15px;color:#1E1C1A;margin:0;">
+      <p style="font-size:15px;color:#1A1A1A;margin:0;">
         Com carinho,<br>
         <strong>Sua professora</strong> — Studio Personal Training
       </p>
     </td>
   </tr>
   <tr>
-    <td style="background:#E8E0D4;padding:18px 32px;text-align:center;
-               border-top:1px solid #A89880;">
-      <p style="margin:0;font-size:12px;color:#5C5248;">
+    <td style="background:#F5F5F5;padding:18px 32px;text-align:center;
+               border-top:1px solid #E8E8E8;">
+      <p style="margin:0;font-size:12px;color:#888888;">
         Studio Personal Training &nbsp;|&nbsp; Este e-mail foi enviado automaticamente.
       </p>
     </td>
@@ -2823,7 +2867,7 @@ def _perfil_cliente_prof(slug):
                 st.markdown("#### Treinos por tipo")
                 fig_ci = go.Figure(go.Bar(
                     x=list(contagem.keys()), y=list(contagem.values()),
-                    marker_color="#2E2B27",
+                    marker_color="#7C4DFF",
                 ))
                 fig_ci.update_layout(
                     xaxis_title="Treino", yaxis_title="Vezes",
@@ -2876,11 +2920,11 @@ def _perfil_cliente_prof(slug):
                 fig_fb = go.Figure()
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=humor_num, mode="lines+markers",
-                    name="Humor (1-5)", line=dict(color="#2E2B27", width=2),
+                    name="Humor (1-5)", line=dict(color="#7C4DFF", width=2),
                 ))
                 fig_fb.add_trace(go.Scatter(
                     x=datas_fb, y=dor_num, mode="lines+markers",
-                    name="Dor muscular (1-5)", line=dict(color="#A89880", width=2, dash="dash"),
+                    name="Dor muscular (1-5)", line=dict(color="#888888", width=2, dash="dash"),
                 ))
                 fig_fb.update_layout(
                     xaxis_title="Data", yaxis=dict(range=[0, 5.5]),
@@ -2909,7 +2953,7 @@ def _fin_contrato_cliente(slug):
         label_status = {"ativo": "🟢 Ativo", "pausado": "🟡 Pausado",
                         "encerrado": "⚫ Encerrado"}.get(fin.get("status", ""), "—")
         st.markdown(
-            f'<div style="background:#F0EAE0;border-radius:8px;padding:10px 14px;margin-bottom:12px;">'
+            f'<div style="background:#FAFAFA;border:1px solid #E8E8E8;border-radius:8px;padding:10px 14px;margin-bottom:12px;">'
             f'<b>Contrato atual:</b> {_tipo_label(fin.get("tipo",""))} &nbsp;|&nbsp; '
             f'R$ {float(fin.get("valor",0)):,.2f}/mês &nbsp;|&nbsp; '
             f'Início: {_fmt_data_br(fin.get("data_inicio",""))} &nbsp;|&nbsp; '
@@ -3146,11 +3190,11 @@ def _fin_visao_geral():
             emoji  = "🟢"
             label  = "Pago"
         elif status == "inativo":
-            bg     = "#E8E0D4"
+            bg     = "#F5F5F5"
             emoji  = "⚫"
             label  = fin.get("status", "inativo").capitalize()
         else:
-            bg     = "#F0EAE0"
+            bg     = "#FAFAFA"
             emoji  = "⚪"
             label  = "Em dia"
 
@@ -3418,7 +3462,7 @@ def _render_calendario_checkins(slug, ano, mes):
                 if tipo == 'treinou':
                     bg, icon = '#d4edda', '✅'
                 else:
-                    bg, icon = '#E8E0D4', '😴'
+                    bg, icon = '#E8E8E8', '😴'
                 html += (
                     f'<td style="background:{bg};border-radius:6px;padding:5px 2px;">'
                     f'<div style="font-size:1rem;">{icon}</div>'
@@ -3792,9 +3836,9 @@ def _tab_aluno_meu_plano(slug):
     elif status == "atrasado":
         bg, emoji, label = "#fde8e8", "🔴", f"Pagamento em atraso ({delta} dia{'s' if delta != 1 else ''})"
     elif status == "inativo":
-        bg, emoji, label = "#E8E0D4", "⚫", fin.get("status", "inativo").capitalize()
+        bg, emoji, label = "#F5F5F5", "⚫", fin.get("status", "inativo").capitalize()
     else:
-        bg, emoji, label = "#F0EAE0", "⚪", "Em dia"
+        bg, emoji, label = "#FAFAFA", "⚪", "Em dia"
 
     st.markdown(
         f'<div style="background:{bg};border-radius:10px;padding:16px 20px;margin-bottom:16px;">'
@@ -3830,12 +3874,12 @@ def _tab_aluno_meu_plano(slug):
         col_info, col_dl = st.columns([4, 1])
         with col_info:
             st.markdown(
-                f'<div style="background:#F0EAE0;border-radius:6px;'
+                f'<div style="background:#FAFAFA;border:1px solid #E8E8E8;border-radius:6px;'
                 f'padding:8px 14px;margin-bottom:4px;">'
                 f'<b>{data_p}</b> &nbsp;·&nbsp; R$ {valor_p:,.2f} '
                 f'&nbsp;·&nbsp; {forma_p}'
                 + (f' &nbsp;·&nbsp; <i>{obs_p}</i>' if obs_p else '') +
-                f'<br><span style="color:#A89880;font-size:0.8rem;">{num}</span>'
+                f'<br><span style="color:#888888;font-size:0.8rem;">{num}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -3867,58 +3911,51 @@ def _tab_aluno_meu_plano(slug):
 
 
 def _pagina_aluno_logado():
-    slug  = st.session_state.get('aluno_logado_slug', '')
-    cad   = _carregar_json(_cadastro_path(slug), {})
+    slug   = st.session_state.get('aluno_logado_slug', '')
+    cad    = _carregar_json(_cadastro_path(slug), {})
     nome_c = cad.get('nome', slug)
 
-    col_titulo, col_sair = st.columns([7, 1])
-    with col_titulo:
-        st.title("Studio Personal Training")
-        st.markdown(
-            f'<p class="subtitulo">Olá, {nome_c.split()[0]}! 👋</p>',
-            unsafe_allow_html=True,
-        )
-    with col_sair:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("Sair", key="btn_sair_aluno_logado"):
+    # ── Sidebar de navegação ──────────────────────────────────────────────────
+    with st.sidebar:
+        st.markdown(f"""
+        <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
+            <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
+            <p style="color:#7C4DFF; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+            <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Olá, {nome_c.split()[0]}!</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        _NAV_ALUNO = [
+            "🏋️  Meu Treino",
+            "📅  Check-in",
+            "📋  Anamnese",
+            "📊  Progresso",
+            "💬  Feedback",
+            "💳  Meu Plano",
+        ]
+        secao_aluno = st.radio("nav", _NAV_ALUNO, key="nav_aluno",
+                               label_visibility="collapsed")
+
+        st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+        if st.button("Sair", key="btn_sair_aluno", use_container_width=True):
             st.session_state.pop('aluno_logado_slug', None)
             st.session_state['area'] = None
             st.rerun()
 
-    st.divider()
-
-    (tab_an_a, tab_post_a, tab_prog_a,
-     tab_treino_a, tab_checkin_a, tab_feedback_a, tab_plano_a) = st.tabs([
-        "📋  Anamnese",
-        "📸  Postural",
-        "📊  Progresso",
-        "🏋️  Meu Treino",
-        "📅  Check-in",
-        "💬  Feedback",
-        "💳  Meu Plano",
-    ])
-
-    with tab_an_a:
+    # ── Conteúdo principal ────────────────────────────────────────────────────
+    if secao_aluno == "🏋️  Meu Treino":
+        _tab_aluno_meu_treino(slug)
+    elif secao_aluno == "📅  Check-in":
+        _tab_aluno_checkin(slug)
+    elif secao_aluno == "📋  Anamnese":
         _pagina_anamnese()
-
-    with tab_post_a:
-        _pagina_upload_postural()
-
-    with tab_prog_a:
+    elif secao_aluno == "📊  Progresso":
         if not st.session_state.get('cliente_slug'):
             st.session_state['cliente_slug'] = slug
         _pagina_portal_cliente()
-
-    with tab_treino_a:
-        _tab_aluno_meu_treino(slug)
-
-    with tab_checkin_a:
-        _tab_aluno_checkin(slug)
-
-    with tab_feedback_a:
+    elif secao_aluno == "💬  Feedback":
         _tab_aluno_feedback(slug)
-
-    with tab_plano_a:
+    elif secao_aluno == "💳  Meu Plano":
         _tab_aluno_meu_plano(slug)
 
 
@@ -4021,11 +4058,14 @@ def _tab_videos_prof():
 # ── Página: Professora ────────────────────────────────────────────────────────
 
 def _pagina_professora():
-    # Tela de login
+    # ── Tela de login (sem sidebar) ───────────────────────────────────────────
     if not st.session_state.get('autenticado'):
-        st.title("Studio Personal Training")
-        st.markdown("### Acesso Restrito — Área da Professora")
-        st.divider()
+        st.markdown("""
+        <div style="text-align:center; padding:3rem 0 1.5rem;">
+            <h2 style="color:#1A1A1A; font-weight:800; margin:0;">Studio Personal Training</h2>
+            <p style="color:#666666; margin:0.4rem 0 0 0;">Acesso Restrito — Área da Professora</p>
+        </div>
+        """, unsafe_allow_html=True)
 
         col_l, col_form, col_r = st.columns([1, 2, 1])
         with col_form:
@@ -4048,45 +4088,45 @@ def _pagina_professora():
                 st.rerun()
         return
 
-    # Cabeçalho da área autenticada
-    col_titulo, col_sair = st.columns([9, 1])
-    with col_titulo:
-        st.title("Studio Personal Training")
-        st.markdown('<p class="subtitulo">Área da Professora</p>', unsafe_allow_html=True)
-    with col_sair:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("Sair", key="btn_sair"):
+    # ── Sidebar de navegação ──────────────────────────────────────────────────
+    with st.sidebar:
+        st.markdown("""
+        <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
+            <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
+            <p style="color:#7C4DFF; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+            <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área da Professora</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        _NAV_PROF = [
+            "🏋️  Gerador de Treino",
+            "📋  Anamneses",
+            "📸  Avaliação Postural",
+            "👥  Clientes",
+            "🎬  Vídeos",
+            "💰  Financeiro",
+        ]
+        secao_prof = st.radio("nav", _NAV_PROF, key="nav_prof",
+                              label_visibility="collapsed")
+
+        st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+        if st.button("Sair", key="btn_sair", use_container_width=True):
             st.session_state['autenticado'] = False
             st.session_state['area']        = None
             st.rerun()
 
-    st.divider()
-
-    tab_treino, tab_anamneses, tab_postural, tab_cli, tab_videos, tab_fin = st.tabs([
-        "🏋️  Gerador de Treino",
-        "📋  Anamneses Recebidas",
-        "📸  Avaliação Postural",
-        "👥  Clientes",
-        "🎬  Vídeos",
-        "💰  Financeiro",
-    ])
-
-    with tab_treino:
+    # ── Conteúdo principal ────────────────────────────────────────────────────
+    if secao_prof == "🏋️  Gerador de Treino":
         _tab_gerador_treino()
-
-    with tab_anamneses:
+    elif secao_prof == "📋  Anamneses":
         _tab_anamneses_recebidas()
-
-    with tab_postural:
+    elif secao_prof == "📸  Avaliação Postural":
         _tab_avaliacao_postural()
-
-    with tab_cli:
+    elif secao_prof == "👥  Clientes":
         _tab_clientes()
-
-    with tab_videos:
+    elif secao_prof == "🎬  Vídeos":
         _tab_videos_prof()
-
-    with tab_fin:
+    elif secao_prof == "💰  Financeiro":
         _tab_financeiro()
 
 

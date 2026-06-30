@@ -28,14 +28,15 @@ FONTE_N, FONTE_B = _registrar_fontes()
 
 # ── Paleta ────────────────────────────────────────────────────────────────────
 
-PRETO       = HexColor('#1E1C1A')
-CINZA_MEIO  = HexColor('#5C5248')
-CINZA_PAR   = HexColor('#F0EAE0')
-CINZA_IMPAR = HexColor('#E8E0D4')
-CINZA_SEP   = HexColor('#A89880')
-CINZA_ROD   = HexColor('#5C5248')
-CINZA_SUB   = HexColor('#A89880')
-CINZA_TH    = HexColor('#2E2B27')
+PRETO       = HexColor('#1A1A1A')
+CINZA_MEIO  = HexColor('#666666')
+CINZA_PAR   = HexColor('#FAFAFA')
+CINZA_IMPAR = HexColor('#FFFFFF')
+CINZA_SEP   = HexColor('#E8E8E8')
+CINZA_ROD   = HexColor('#666666')
+CINZA_SUB   = HexColor('#888888')
+CINZA_TH    = HexColor('#1A1A1A')
+ROXO        = HexColor('#7C4DFF')
 AMARELO_AV  = HexColor('#FFF3CD')
 TEXTO_AV    = HexColor('#856404')
 
@@ -62,7 +63,7 @@ def _estilos():
         'hdr_sub':    ps('AHdrSub',    fontName=FONTE_N, fontSize=9,
                          textColor=CINZA_SUB, alignment=TA_CENTER, spaceBefore=2),
         'sec_titulo': ps('ASecTit',    fontName=FONTE_B, fontSize=11,
-                         textColor=PRETO, spaceBefore=14, spaceAfter=4),
+                         textColor=ROXO, spaceBefore=14, spaceAfter=4),
         'lbl':        ps('ALbl',       fontName=FONTE_B, fontSize=8,
                          textColor=CINZA_MEIO, leading=12),
         'val':        ps('AVal',       fontName=FONTE_N, fontSize=8,

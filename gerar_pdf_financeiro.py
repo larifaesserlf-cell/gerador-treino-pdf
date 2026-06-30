@@ -11,11 +11,12 @@ from reportlab.platypus import (
     HRFlowable, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle,
 )
 
-PRETO     = colors.HexColor("#1E1C1A")
-CINZA_ESC = colors.HexColor("#2E2B27")
-CINZA_MED = colors.HexColor("#5C5248")
-CINZA_CLR = colors.HexColor("#A89880")
-CINZA_PAR = colors.HexColor("#F0EAE0")
+PRETO     = colors.HexColor("#1A1A1A")
+CINZA_ESC = colors.HexColor("#666666")
+CINZA_MED = colors.HexColor("#888888")
+CINZA_CLR = colors.HexColor("#E8E8E8")
+CINZA_PAR = colors.HexColor("#FAFAFA")
+ROXO      = colors.HexColor("#7C4DFF")
 BRANCO    = colors.white
 
 PAGE_W, PAGE_H = A4
@@ -25,7 +26,7 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 _titulo = ParagraphStyle("ft", fontName="Helvetica-Bold", fontSize=16,
                          textColor=PRETO, spaceAfter=2)
 _sub    = ParagraphStyle("fs", fontName="Helvetica-Bold", fontSize=11,
-                         textColor=CINZA_ESC, spaceAfter=6, spaceBefore=12)
+                         textColor=ROXO, spaceAfter=6, spaceBefore=12)
 _body   = ParagraphStyle("fb", fontName="Helvetica", fontSize=9,
                          textColor=CINZA_ESC, spaceAfter=3)
 _small  = ParagraphStyle("fsm", fontName="Helvetica", fontSize=8,
