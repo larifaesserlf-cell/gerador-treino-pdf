@@ -41,11 +41,26 @@ st.set_page_config(
 st.markdown("""
 <style>
 /* ── Fundo principal ─────────────────────────────────────────────────── */
-.stApp {
+.stApp, .main, .main .block-container {
     background-color: #F8F5F0 !important;
 }
-.main .block-container {
-    background-color: #F8F5F0 !important;
+
+/* ── Textos gerais (área principal) ──────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+    color: #1A1A1A !important;
+}
+p, span, .stMarkdown, .stText {
+    color: #1A1A1A !important;
+}
+
+/* Labels de widgets */
+.stTextInput label, .stNumberInput label,
+.stSelectbox label, .stDateInput label,
+.stTextArea label, .stRadio label,
+.stMultiSelect label, .stCheckbox label,
+.stSlider label, .stFileUploader label {
+    color: #1A1A1A !important;
+    font-weight: 500 !important;
 }
 
 /* ── Sidebar escura ──────────────────────────────────────────────────── */
@@ -54,9 +69,13 @@ st.markdown("""
 [data-testid="stSidebar"] > div {
     background-color: #1A1A1A !important;
 }
-[data-testid="stSidebar"] * { box-sizing: border-box; }
+/* Tudo na sidebar herda branco por padrão */
+section[data-testid="stSidebar"] * {
+    color: #FFFFFF !important;
+    box-sizing: border-box;
+}
 
-/* Radio items — menu lateral */
+/* Radio items — menu lateral (sobrescreve o * acima) */
 [data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 [data-testid="stSidebar"] .stRadio > div > div[role="radio"] {
     padding: 9px 14px 9px 16px !important;
@@ -140,14 +159,42 @@ div[data-testid="stTabs"] [data-baseweb="tab-border"] {
     background-color: #E8E8E8 !important;
 }
 
-/* ── Inputs ──────────────────────────────────────────────────────────── */
-.stTextInput input, .stTextArea textarea,
-input[type="text"], input[type="email"],
-input[type="number"], input[type="password"], textarea {
+/* ── Inputs e selects ────────────────────────────────────────────────── */
+.stTextInput input, .stNumberInput input,
+.stTextArea textarea, input[type="text"],
+input[type="email"], input[type="number"],
+input[type="password"], textarea {
     background-color: #FFFFFF !important;
-    border-color: #E8E8E8 !important;
+    color: #1A1A1A !important;
+    border: 1px solid #E8E8E8 !important;
     border-radius: 8px !important;
     box-shadow: none !important;
+}
+
+/* ── Expanders ───────────────────────────────────────────────────────── */
+.stExpander {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8E8E8 !important;
+    border-radius: 8px !important;
+}
+.stExpander summary {
+    color: #1A1A1A !important;
+}
+.stExpander summary span {
+    color: #1A1A1A !important;
+}
+
+/* ── Métricas ────────────────────────────────────────────────────────── */
+[data-testid="stMetricValue"] {
+    color: #1A1A1A !important;
+}
+[data-testid="stMetricLabel"] {
+    color: #666666 !important;
+}
+
+/* ── Tabelas e dataframes ────────────────────────────────────────────── */
+.stDataFrame, .stTable {
+    background-color: #FFFFFF !important;
 }
 
 /* ── Misc ─────────────────────────────────────────────────────────────── */
