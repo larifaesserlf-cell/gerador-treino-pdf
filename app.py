@@ -42,7 +42,7 @@ st.markdown("""
 <style>
 /* ── Fundo principal ─────────────────────────────────────────────────── */
 .stApp, .main, .main .block-container {
-    background-color: #F8F5F0 !important;
+    background-color: #F5F5F5 !important;
 }
 
 /* ── Textos gerais (área principal) ──────────────────────────────────── */
@@ -206,6 +206,55 @@ input::placeholder, textarea::placeholder,
 /* ── Tabelas e dataframes ────────────────────────────────────────────── */
 .stDataFrame, .stTable {
     background-color: #FFFFFF !important;
+}
+
+/* ── BaseWeb inputs ──────────────────────────────────────────────────── */
+[data-baseweb="input"] {
+    background-color: #FFFFFF !important;
+}
+[data-baseweb="input"] input {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+}
+
+/* ── BaseWeb select / dropdown ───────────────────────────────────────── */
+[data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    border-color: #E8E8E8 !important;
+}
+[data-baseweb="select"] [data-testid="stSelectbox"] {
+    background-color: #FFFFFF !important;
+}
+[role="listbox"] {
+    background-color: #FFFFFF !important;
+}
+[role="option"] {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+}
+[role="option"]:hover {
+    background-color: #F5F5F5 !important;
+}
+
+/* ── Radio buttons (área principal) ─────────────────────────────────── */
+[data-testid="stRadio"] [role="radio"]:not([aria-checked="true"]) > div {
+    border-color: #CCCCCC !important;
+    background-color: #FFFFFF !important;
+}
+
+/* ── Upload de arquivo ───────────────────────────────────────────────── */
+[data-testid="stFileUploader"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E8E8E8 !important;
+    border-radius: 8px !important;
+}
+[data-testid="stFileUploader"] * {
+    color: #1A1A1A !important;
+}
+[data-testid="stFileUploader"] section {
+    background-color: #FFFFFF !important;
+    border: 1px dashed #CCCCCC !important;
+    border-radius: 8px !important;
 }
 
 /* ── Misc ─────────────────────────────────────────────────────────────── */
@@ -890,13 +939,6 @@ def _pagina_home():
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             min-height: 160px;
         ">
-            <div style="
-                width:36px; height:36px; background:#C0392B;
-                border-radius:8px; margin-bottom:1rem;
-                display:flex; align-items:center; justify-content:center;
-            ">
-                <span style="color:#fff; font-size:1.1rem; line-height:1;">◉</span>
-            </div>
             <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
                 Área do Aluno
             </p>
@@ -920,13 +962,6 @@ def _pagina_home():
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
             min-height: 160px;
         ">
-            <div style="
-                width:36px; height:36px; background:#1A1A1A;
-                border-radius:8px; margin-bottom:1rem;
-                display:flex; align-items:center; justify-content:center;
-            ">
-                <span style="color:#fff; font-size:1.1rem; line-height:1;">◈</span>
-            </div>
             <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
                 Área da Professora
             </p>
