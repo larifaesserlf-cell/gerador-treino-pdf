@@ -702,58 +702,139 @@ def _exibir_anamnese_streamlit(dados):
 # ── Página: Home ──────────────────────────────────────────────────────────────
 
 def _pagina_home():
+    # ── Fundo escuro + estilo dos botões para esta página ────────────────────
     st.markdown("""
-    <div style="text-align:center; padding: 3rem 0 2rem 0;">
-        <div style="font-size: 3.5rem;">🏋️</div>
-        <h1 style="font-size: 2.2rem; font-weight: 700; margin: 0.4rem 0;">Studio Personal Training</h1>
-        <p style="color: #666; font-size: 1.05rem; margin: 0;">Como você deseja continuar?</p>
+    <style>
+    [data-testid="stAppViewContainer"],
+    section[data-testid="stMain"],
+    section[data-testid="stMain"] > div:first-child,
+    [data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stDecoration"] {
+        background-color: #1E1C1A !important;
+    }
+    div[data-testid="stButton"] > button {
+        background-color: #5C5248 !important;
+        color: #F0EAE0 !important;
+        border: none !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.06em !important;
+        border-radius: 6px !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        background-color: #2E2B27 !important;
+        color: #F0EAE0 !important;
+        border: none !important;
+    }
+    div[data-testid="stVerticalBlock"] {
+        gap: 0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="text-align:center; padding: 4rem 0 3rem 0;">
+        <p style="
+            letter-spacing: 0.22em;
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #F0EAE0;
+            margin: 0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            text-transform: uppercase;
+        ">Studio Personal Training</p>
+        <p style="
+            color: #A89880;
+            font-size: 0.82rem;
+            margin: 0.55rem 0 0 0;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        ">Sistema de Gestão</p>
+        <div style="
+            width: 48px; height: 1px;
+            background: #5C5248;
+            margin: 2rem auto 0;
+        "></div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.divider()
-
-    col1, col2 = st.columns(2)
+    # ── Cards ─────────────────────────────────────────────────────────────────
+    col1, col2 = st.columns(2, gap="large")
 
     with col1:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
-                    text-align:center; background:#F0EAE0; min-height:220px;">
-            <div style="font-size:3.2rem; margin-bottom:0.6rem;">🧑‍🤸</div>
-            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Área do Aluno</h3>
-            <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
-                Acesse seu treino, check-in, anamnese, progresso e plano financeiro.
-            </p>
+        <div style="
+            background: #2E2B27;
+            border: 1px solid #5C5248;
+            border-radius: 10px;
+            padding: 2rem 1.6rem 1.2rem 1.6rem;
+            min-height: 190px;
+        ">
+            <p style="color:#A89880; font-size:1.1rem; margin:0 0 0.9rem 0; line-height:1;">◈</p>
+            <p style="
+                color: #F0EAE0;
+                font-weight: 700;
+                font-size: 1.05rem;
+                margin: 0 0 0.55rem 0;
+                letter-spacing: 0.03em;
+            ">Área do Aluno</p>
+            <p style="
+                color: #A89880;
+                font-size: 0.85rem;
+                margin: 0;
+                line-height: 1.65;
+            ">Treino, check-in, anamnese, progresso e plano financeiro.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Área do Aluno", key="btn_home_aluno",
-                     use_container_width=True, type="primary"):
+        st.markdown("<div style='height:0.55rem'></div>", unsafe_allow_html=True)
+        if st.button("Área do Aluno", key="btn_home_aluno", use_container_width=True):
             st.session_state['area'] = 'aluno_login'
             st.rerun()
 
     with col2:
         st.markdown("""
-        <div style="border:1px solid #ddd; border-radius:14px; padding:2.2rem 1.2rem;
-                    text-align:center; background:#F0EAE0; min-height:220px;">
-            <div style="font-size:3.2rem; margin-bottom:0.6rem;">👩‍💼</div>
-            <h3 style="margin:0 0 0.6rem 0; font-size:1.2rem;">Acesso Professora</h3>
-            <p style="color:#666; font-size:0.9rem; margin:0; line-height:1.6;">
-                Gerencie clientes, anamneses, avaliações posturais e gere treinos.
-            </p>
+        <div style="
+            background: #2E2B27;
+            border: 1px solid #5C5248;
+            border-radius: 10px;
+            padding: 2rem 1.6rem 1.2rem 1.6rem;
+            min-height: 190px;
+        ">
+            <p style="color:#A89880; font-size:1.1rem; margin:0 0 0.9rem 0; line-height:1;">◈</p>
+            <p style="
+                color: #F0EAE0;
+                font-weight: 700;
+                font-size: 1.05rem;
+                margin: 0 0 0.55rem 0;
+                letter-spacing: 0.03em;
+            ">Área da Professora</p>
+            <p style="
+                color: #A89880;
+                font-size: 0.85rem;
+                margin: 0;
+                line-height: 1.65;
+            ">Clientes, anamneses, avaliação postural, treinos e financeiro.</p>
         </div>
         """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("Acesso Professora", key="btn_home_prof",
-                     use_container_width=True):
+        st.markdown("<div style='height:0.55rem'></div>", unsafe_allow_html=True)
+        if st.button("Área da Professora", key="btn_home_prof", use_container_width=True):
             st.session_state['area'] = 'professora'
             st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(
-        '<p style="text-align:center; color:#bbb; font-size:0.8rem;">'
-        'Studio Personal Training — Sistema de Gestão</p>',
-        unsafe_allow_html=True,
-    )
+    # ── Rodapé ────────────────────────────────────────────────────────────────
+    st.markdown("""
+    <div style="text-align:center; padding: 3.5rem 0 1rem 0;">
+        <p style="
+            color: #5C5248;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            margin: 0;
+            text-transform: uppercase;
+        ">Studio Personal Training — Sistema de Gestão</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ── Página: Anamnese (cliente) ────────────────────────────────────────────────
