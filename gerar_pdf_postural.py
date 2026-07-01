@@ -208,23 +208,41 @@ def gerar_pdf_postural(dados: dict) -> bytes:
     nome         = dados.get('cliente', 'Cliente')
     data_aval    = dados.get('data_avaliacao', '')
     data_geracao = dados.get('data_geracao', datetime.now().strftime('%d/%m/%Y %H:%M'))
+    _LOGO_PATH = os.path.join(os.path.dirname(__file__), 'assets', 'logo_claro.png')
+    logo_cell = []
+    if os.path.exists(_LOGO_PATH):
+        try:
+            logo_cell = [RLImage(_LOGO_PATH, width=5.5 * cm, height=5.5 * cm * 140 / 600)]
+        except Exception:
+            logo_cell = [_p('Studio Personal Training', est['hdr_sub'])]
+    else:
+        logo_cell = [_p('Studio Personal Training', est['hdr_sub'])]
+
+    est_tit_escuro = ParagraphStyle('PHdrTitEsc', fontName=FONTE_B, fontSize=16,
+                                    textColor=PRETO, alignment=TA_CENTER, leading=22)
+    est_nom_escuro = ParagraphStyle('PHdrNomEsc', fontName=FONTE_B, fontSize=12,
+                                    textColor=PRETO, alignment=TA_CENTER, spaceBefore=2)
+    est_sub_escuro = ParagraphStyle('PHdrSubEsc', fontName=FONTE_N, fontSize=8,
+                                    textColor=CINZA_MEIO, alignment=TA_CENTER, spaceBefore=2)
+
     hdr = Table([
-        [_p('AVALIAÇÃO POSTURAL',          est['hdr_titulo'])],
-        [_p(nome.upper(),                   est['hdr_nome'])],
-        [_p('Studio Personal Training',     est['hdr_sub'])],
-        [_p('Data da avaliação: ' + data_aval + '  ·  Gerado em: ' + data_geracao, est['hdr_sub'])],
+        logo_cell,
+        [_p('AVALIAÇÃO POSTURAL', est_tit_escuro)],
+        [_p(nome.upper(),         est_nom_escuro)],
+        [_p('Data da avaliação: ' + data_aval + '  ·  Gerado em: ' + data_geracao, est_sub_escuro)],
     ], colWidths=[CONTENT_W])
     hdr.setStyle(TableStyle([
-        ('BACKGROUND',    (0, 0), (-1, -1), PRETO),
+        ('BACKGROUND',    (0, 0), (-1, -1), white),
         ('VALIGN',        (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING',    (0, 0), (-1, 0),  18),
+        ('TOPPADDING',    (0, 0), (-1, 0),  16),
         ('BOTTOMPADDING', (0, 0), (-1, 0),  6),
         ('TOPPADDING',    (0, 1), (-1, 2),  4),
         ('BOTTOMPADDING', (0, 1), (-1, 2),  4),
         ('TOPPADDING',    (0, 3), (-1, 3),  4),
-        ('BOTTOMPADDING', (0, 3), (-1, -1), 18),
+        ('BOTTOMPADDING', (0, 3), (-1, -1), 14),
         ('LEFTPADDING',   (0, 0), (-1, -1), 18),
         ('RIGHTPADDING',  (0, 0), (-1, -1), 18),
+        ('LINEBELOW',     (0, -1), (-1, -1), 1.5, VERMELHO),
     ]))
     story.append(hdr)
     story.append(Spacer(1, 0.4 * cm))

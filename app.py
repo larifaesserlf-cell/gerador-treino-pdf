@@ -4063,10 +4063,9 @@ def _pagina_aluno_logado():
 
     # ── Sidebar de navegação ──────────────────────────────────────────────────
     with st.sidebar:
+        st.image("assets/logo_escuro.png", use_container_width=True)
         st.markdown(f"""
-        <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
-            <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
-            <p style="color:#C0392B; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Olá, {nome_c.split()[0]}!</p>
         </div>
         """, unsafe_allow_html=True)
@@ -4236,10 +4235,9 @@ def _pagina_professora():
 
     # ── Sidebar de navegação ──────────────────────────────────────────────────
     with st.sidebar:
+        st.image("assets/logo_escuro.png", use_container_width=True)
         st.markdown("""
-        <div style="padding:1.6rem 1rem 1.2rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
-            <p style="color:#FFFFFF; font-size:1.15rem; font-weight:800; margin:0; letter-spacing:0.06em;">STUDIO</p>
-            <p style="color:#C0392B; font-size:0.72rem; margin:0 0 0.6rem 0; letter-spacing:0.04em; text-transform:uppercase;">Personal Training</p>
+        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área da Professora</p>
         </div>
         """, unsafe_allow_html=True)
