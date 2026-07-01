@@ -3686,10 +3686,11 @@ def _render_calendario_checkins(slug, ano, mes):
 
     dias_semana_nomes = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     html = (
-        '<table style="width:100%;border-collapse:separate;border-spacing:3px;'
+        '<div style="overflow-x:auto;">'
+        '<table style="width:100%;min-width:280px;table-layout:fixed;border-collapse:separate;border-spacing:clamp(1px,0.8vw,3px);'
         'text-align:center;margin-bottom:8px;">'
         '<tr>' +
-        ''.join(f'<th style="padding:6px;color:#888;font-size:0.8rem;">{d}</th>'
+        ''.join(f'<th style="padding:clamp(2px,1vw,6px);color:#888;font-size:clamp(0.55rem,2vw,0.8rem);">{d}</th>'
                 for d in dias_semana_nomes) +
         '</tr>'
     )
@@ -3711,24 +3712,24 @@ def _render_calendario_checkins(slug, ano, mes):
                 else:
                     bg, icon = '#E8E8E8', '😴'
                 html += (
-                    f'<td style="background:{bg};border-radius:6px;padding:5px 2px;">'
-                    f'<div style="font-size:1rem;">{icon}</div>'
-                    f'<div style="font-size:0.85rem;font-weight:600;">{dia}</div>'
-                    + (f'<div style="font-size:0.7rem;color:#555;">{letra}</div>' if letra else '') +
+                    f'<td style="background:{bg};border-radius:6px;padding:clamp(2px,1vw,5px) 2px;">'
+                    f'<div style="font-size:clamp(0.7rem,2.5vw,1rem);">{icon}</div>'
+                    f'<div style="font-size:clamp(0.6rem,2vw,0.85rem);font-weight:600;">{dia}</div>'
+                    + (f'<div style="font-size:clamp(0.5rem,1.6vw,0.7rem);color:#555;">{letra}</div>' if letra else '') +
                     '</td>'
                 )
             elif futuro:
                 html += (
-                    f'<td style="padding:5px 2px;color:#ccc;">'
-                    f'<div style="font-size:0.85rem;">{dia}</div></td>'
+                    f'<td style="padding:clamp(2px,1vw,5px) 2px;color:#ccc;">'
+                    f'<div style="font-size:clamp(0.6rem,2vw,0.85rem);">{dia}</div></td>'
                 )
             else:
                 html += (
-                    f'<td style="padding:5px 2px;">'
-                    f'<div style="font-size:0.85rem;">{dia}</div></td>'
+                    f'<td style="padding:clamp(2px,1vw,5px) 2px;">'
+                    f'<div style="font-size:clamp(0.6rem,2vw,0.85rem);">{dia}</div></td>'
                 )
         html += '</tr>'
-    html += '</table>'
+    html += '</table></div>'
     return html
 
 
@@ -4399,8 +4400,8 @@ def _pagina_professora():
     # ── Tela de login (sem sidebar) ───────────────────────────────────────────
     if not st.session_state.get('autenticado'):
         st.markdown("""
-        <div style="text-align:center; padding:3rem 0 1.5rem;">
-            <h2 style="color:#1A1A1A; font-weight:800; margin:0;">Larissa Faesser Personal</h2>
+        <div style="text-align:center; padding:3rem 1rem 1.5rem;">
+            <h2 style="color:#1A1A1A; font-weight:800; margin:0; font-size:clamp(1.2rem, 6vw, 1.8rem); white-space:nowrap;">Larissa Faesser Personal</h2>
             <p style="color:#666666; margin:0.4rem 0 0 0;">Acesso Restrito — Área Personal</p>
         </div>
         """, unsafe_allow_html=True)
