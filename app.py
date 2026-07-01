@@ -136,8 +136,9 @@ section[data-testid="stSidebar"] * {
     padding-left: 20px !important;
     font-size: 0.84rem !important;
 }
-/* Botão Sair (via st-key-btn_sair_aluno gerado pelo Streamlit) */
-[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button {
+/* Botão Sair (aluno e professora) */
+[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button,
+[data-testid="stSidebar"] .st-key-btn_sair div[data-testid="stButton"] > button {
     color: #555555 !important;
     border: 1px solid #333333 !important;
     border-left: 1px solid #333333 !important;
@@ -147,7 +148,8 @@ section[data-testid="stSidebar"] * {
     justify-content: center !important;
     padding: 7px 12px !important;
 }
-[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button:hover {
+[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button:hover,
+[data-testid="stSidebar"] .st-key-btn_sair div[data-testid="stButton"] > button:hover {
     background: #2A2A2A !important;
     color: #AAAAAA !important;
 }
@@ -4361,6 +4363,37 @@ def _tab_videos_prof():
 
 # ── Página: Professora ────────────────────────────────────────────────────────
 
+def _tab_painel_prof():
+    st.markdown("## Painel")
+    todos = _todos_cadastros()
+    n_anamneses = len(glob.glob("dados_clientes/anamnese_*.json"))
+
+    atrasados = []
+    pagos = 0
+    for cad in todos:
+        slug = _slug(cad.get('nome', ''))
+        fin  = _carregar_json(_financeiro_path(slug), {})
+        pags = _carregar_json(_pagamentos_path(slug), [])
+        if fin and fin.get('status') != 'inativo':
+            status, _ = _status_fin(fin, pags)
+            if status == 'atrasado':
+                atrasados.append(cad.get('nome', slug))
+            elif status == 'pago':
+                pagos += 1
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Clientes", len(todos))
+    c2.metric("Anamneses", n_anamneses)
+    c3.metric("Pagamentos em dia", pagos)
+    c4.metric("Inadimplentes", len(atrasados))
+
+    if atrasados:
+        st.divider()
+        st.markdown("**Clientes com pagamento em atraso:**")
+        for nome in atrasados:
+            st.markdown(f"- {nome}")
+
+
 def _pagina_professora():
     # ── Tela de login (sem sidebar) ───────────────────────────────────────────
     if not st.session_state.get('autenticado'):
@@ -4392,45 +4425,82 @@ def _pagina_professora():
                 st.rerun()
         return
 
-    # ── Sidebar de navegação ──────────────────────────────────────────────────
+    # ── Nav state ─────────────────────────────────────────────────────────────
+    if 'nav_prof_page' not in st.session_state:
+        st.session_state['nav_prof_page'] = 'painel'
+    current_p = st.session_state['nav_prof_page']
+
+    in_clientes   = current_p in ('clientes', 'anamnese_prof', 'avaliacoes_prof')
+    in_treinos    = current_p in ('criar_treino', 'treinos_cliente')
+    in_financeiro = current_p in ('pagamentos', 'relatorios')
+
+    def _nav_p(label, page_key):
+        if st.button(label, key=f"navp_{page_key}", use_container_width=True):
+            st.session_state['nav_prof_page'] = page_key
+            st.rerun()
+
+    # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
         st.image("assets/logo_escuro.png", use_container_width=True)
-        st.markdown("""
-        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
+        st.markdown(f"""
+        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.4rem;">
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área Personal</p>
         </div>
+        <style>
+        [data-testid="stSidebar"] .st-key-navp_{current_p} div[data-testid="stButton"] > button,
+        [data-testid="stSidebar"] .st-key-navp_{current_p} div[data-testid="stButton"] > button * {{
+            color: #E8896A !important;
+            font-weight: 600 !important;
+        }}
+        [data-testid="stSidebar"] .st-key-navp_{current_p} div[data-testid="stButton"] > button {{
+            border-left: 3px solid #C0392B !important;
+            background: rgba(192,57,43,0.12) !important;
+        }}
+        </style>
         """, unsafe_allow_html=True)
 
-        _NAV_PROF = [
-            "🏋️  Gerador de Treino",
-            "📋  Anamneses",
-            "📸  Avaliação Postural",
-            "👥  Clientes",
-            "🎬  Vídeos",
-            "💰  Financeiro",
-        ]
-        secao_prof = st.radio("nav", _NAV_PROF, key="nav_prof",
-                              label_visibility="collapsed")
+        _nav_p("Painel", "painel")
 
-        st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+        with st.expander("Clientes", expanded=in_clientes):
+            _nav_p("Lista de Clientes", "clientes")
+            _nav_p("Anamnese", "anamnese_prof")
+            _nav_p("Avaliações", "avaliacoes_prof")
+
+        with st.expander("Treinos", expanded=in_treinos):
+            _nav_p("Criar Treino", "criar_treino")
+            _nav_p("Treinos por Cliente", "treinos_cliente")
+
+        with st.expander("Financeiro", expanded=in_financeiro):
+            _nav_p("Pagamentos", "pagamentos")
+            _nav_p("Relatórios", "relatorios")
+
+        _nav_p("Configurações", "configuracoes")
+
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
         if st.button("Sair", key="btn_sair", use_container_width=True):
             st.session_state['autenticado'] = False
             st.session_state['area']        = None
             st.rerun()
 
     # ── Conteúdo principal ────────────────────────────────────────────────────
-    if secao_prof == "🏋️  Gerador de Treino":
-        _tab_gerador_treino()
-    elif secao_prof == "📋  Anamneses":
-        _tab_anamneses_recebidas()
-    elif secao_prof == "📸  Avaliação Postural":
-        _tab_avaliacao_postural()
-    elif secao_prof == "👥  Clientes":
+    if current_p == 'painel':
+        _tab_painel_prof()
+    elif current_p == 'clientes':
         _tab_clientes()
-    elif secao_prof == "🎬  Vídeos":
-        _tab_videos_prof()
-    elif secao_prof == "💰  Financeiro":
+    elif current_p == 'anamnese_prof':
+        _tab_anamneses_recebidas()
+    elif current_p == 'avaliacoes_prof':
+        _tab_avaliacao_postural()
+    elif current_p == 'criar_treino':
+        _tab_gerador_treino()
+    elif current_p == 'treinos_cliente':
+        _tab_clientes()
+    elif current_p in ('pagamentos', 'relatorios'):
         _tab_financeiro()
+    elif current_p == 'configuracoes':
+        _tab_videos_prof()
+    else:
+        _tab_painel_prof()
 
 
 # ── Roteamento principal ──────────────────────────────────────────────────────
