@@ -257,6 +257,50 @@ input::placeholder, textarea::placeholder,
     border-radius: 8px !important;
 }
 
+/* ── BaseWeb base-input (usuário/senha/texto) ────────────────────────── */
+[data-baseweb="base-input"] {
+    background-color: #FFFFFF !important;
+}
+[data-baseweb="base-input"] input {
+    background-color: #FFFFFF !important;
+    color: #1A1A1A !important;
+}
+[data-baseweb="input-container"] {
+    background-color: #FFFFFF !important;
+}
+
+/* ── Radio buttons não selecionados ──────────────────────────────────── */
+[data-testid="stRadio"] [role="radio"][aria-checked="false"] {
+    background-color: #FFFFFF !important;
+    border: 2px solid #CCCCCC !important;
+}
+
+/* ── Checkbox ────────────────────────────────────────────────────────── */
+[data-testid="stCheckbox"] input[type="checkbox"] + div {
+    background-color: #FFFFFF !important;
+    border: 2px solid #CCCCCC !important;
+}
+[data-testid="stCheckbox"] input[type="checkbox"]:checked + div {
+    background-color: #C0392B !important;
+    border-color: #C0392B !important;
+}
+
+/* ── Botões +/- campos numéricos ─────────────────────────────────────── */
+[data-testid="stNumberInput"] button {
+    background-color: #E8E8E8 !important;
+    color: #1A1A1A !important;
+    border: none !important;
+}
+
+/* ── Tags de seleção múltipla ────────────────────────────────────────── */
+[data-baseweb="tag"] {
+    background-color: #C0392B !important;
+    opacity: 0.85 !important;
+}
+[data-baseweb="tag"] span {
+    color: #FFFFFF !important;
+}
+
 /* ── Misc ─────────────────────────────────────────────────────────────── */
 .subtitulo { color: #666666; font-size: 1.05em; margin-top: -0.6em; margin-bottom: 0.2em; }
 hr { border-color: #E8E8E8 !important; }
