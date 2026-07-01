@@ -75,6 +75,13 @@ section[data-testid="stSidebar"] * {
     box-sizing: border-box;
 }
 
+/* Botão de expandir a sidebar (aparece no canto quando ela está recolhida,
+   sobre o cabeçalho escuro — precisa ficar branco para não sumir) */
+[data-testid="stExpandSidebarButton"],
+[data-testid="stExpandSidebarButton"] * {
+    color: #FFFFFF !important;
+}
+
 /* Radio items — menu lateral (sobrescreve o * acima) */
 [data-testid="stSidebar"] .stRadio > div { gap: 2px !important; }
 [data-testid="stSidebar"] .stRadio > div > div[role="radio"] {
