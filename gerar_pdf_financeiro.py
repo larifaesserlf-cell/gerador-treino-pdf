@@ -1,4 +1,4 @@
-"""PDFs financeiros (relatório mensal + recibo) — Studio Personal Training."""
+"""PDFs financeiros (relatório mensal + recibo) — Larissa Faesser Personal."""
 
 import io
 from datetime import datetime
@@ -74,7 +74,7 @@ def gerar_relatorio_mensal(dados):
     story = []
 
     story += [
-        _p("Studio Personal Training", _titulo),
+        _p("Larissa Faesser Personal", _titulo),
         _p(f"Relatório Financeiro — {dados.get('mes_ref', '')}", _sub),
         HRFlowable(width=CONTENT_W, thickness=1.5, color=PRETO),
         Spacer(1, 0.4 * cm),
@@ -162,7 +162,7 @@ def gerar_relatorio_mensal(dados):
 
     story.append(Spacer(1, 0.5 * cm))
     story.append(_p(
-        f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} — Studio Personal Training",
+        f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} — Larissa Faesser Personal",
         _small,
     ))
     doc.build(story)
@@ -189,7 +189,7 @@ def gerar_recibo(dados):
     story = []
 
     story += [
-        _p("Studio Personal Training", _titulo),
+        _p("Larissa Faesser Personal", _titulo),
         _p("RECIBO DE PAGAMENTO", _sub),
         HRFlowable(width=CONTENT_W, thickness=2, color=PRETO),
         Spacer(1, 0.6 * cm),
@@ -227,7 +227,7 @@ def gerar_recibo(dados):
         _p("Assinatura / Carimbo", _small),
         Spacer(1, 0.4 * cm),
         _p(
-            f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} — Studio Personal Training",
+            f"Gerado em {datetime.now().strftime('%d/%m/%Y às %H:%M')} — Larissa Faesser Personal",
             _small,
         ),
     ]

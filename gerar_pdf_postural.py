@@ -40,7 +40,7 @@ CINZA_ROD   = HexColor('#666666')
 CINZA_SUB   = HexColor('#888888')
 VERMELHO    = HexColor('#C0392B')
 
-NOME_CONSULTORIA = 'Studio Personal Training'
+NOME_CONSULTORIA = 'Larissa Faesser Personal'
 PAGE_W, PAGE_H   = A4
 MARGIN            = 2 * cm
 CONTENT_W         = PAGE_W - 2 * MARGIN
@@ -214,9 +214,9 @@ def gerar_pdf_postural(dados: dict) -> bytes:
         try:
             logo_cell = [RLImage(_LOGO_PATH, width=5.5 * cm, height=5.5 * cm * 140 / 600)]
         except Exception:
-            logo_cell = [_p('Studio Personal Training', est['hdr_sub'])]
+            logo_cell = [_p('Larissa Faesser Personal', est['hdr_sub'])]
     else:
-        logo_cell = [_p('Studio Personal Training', est['hdr_sub'])]
+        logo_cell = [_p('Larissa Faesser Personal', est['hdr_sub'])]
 
     est_tit_escuro = ParagraphStyle('PHdrTitEsc', fontName=FONTE_B, fontSize=16,
                                     textColor=PRETO, alignment=TA_CENTER, leading=22)

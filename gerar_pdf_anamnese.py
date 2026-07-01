@@ -40,7 +40,7 @@ VERMELHO    = HexColor('#C0392B')
 AMARELO_AV  = HexColor('#FFF3CD')
 TEXTO_AV    = HexColor('#856404')
 
-NOME_CONSULTORIA = "Studio Personal Training"
+NOME_CONSULTORIA = "Larissa Faesser Personal"
 PAGE_W, PAGE_H   = A4
 MARGIN            = 2 * cm
 CONTENT_W         = PAGE_W - 2 * MARGIN

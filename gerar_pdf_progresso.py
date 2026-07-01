@@ -1,4 +1,4 @@
-"""PDF de progresso do cliente — Studio Personal Training."""
+"""PDF de progresso do cliente — Larissa Faesser Personal."""
 
 import io
 from datetime import datetime
@@ -147,7 +147,7 @@ def gerar_pdf_progresso(dados: dict) -> bytes:
     story = []
 
     # Cabeçalho
-    story.append(Paragraph("Studio Personal Training", _sty_titulo))
+    story.append(Paragraph("Larissa Faesser Personal", _sty_titulo))
     story.append(Paragraph("Relatório de Progresso", _sty_sub))
     story.append(Paragraph(f"<b>Cliente:</b> {dados.get('cliente', '')}", _sty_body))
     ini = dados.get("data_inicio", "—")
@@ -255,7 +255,7 @@ def gerar_pdf_progresso(dados: dict) -> bytes:
     story.append(HRFlowable(width="100%", thickness=1, color=CINZA_CLR))
     story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph(
-        f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} — Studio Personal Training",
+        f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')} — Larissa Faesser Personal",
         _sty_small,
     ))
 

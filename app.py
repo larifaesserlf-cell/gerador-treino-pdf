@@ -33,7 +33,7 @@ except ImportError:
 # ── Configuração da página ─────────────────────────────────────────────────────
 
 st.set_page_config(
-    page_title="Studio Personal Training",
+    page_title="Larissa Faesser Personal",
     page_icon="🏋️",
     layout="centered",
 )
@@ -295,10 +295,36 @@ input::placeholder, textarea::placeholder,
 /* ── Tags de seleção múltipla ────────────────────────────────────────── */
 [data-baseweb="tag"] {
     background-color: #C0392B !important;
-    opacity: 0.85 !important;
+    max-width: none !important;
 }
-[data-baseweb="tag"] span {
+[data-baseweb="tag"] span,
+[data-baseweb="tag"] > span {
     color: #FFFFFF !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+}
+
+/* ── Expander header fundo claro ─────────────────────────────────────── */
+[data-testid="stExpander"] > details > summary,
+[data-testid="stExpanderHeader"],
+.stExpander summary {
+    background-color: #F5F5F5 !important;
+    color: #1A1A1A !important;
+    border-radius: 6px !important;
+}
+[data-testid="stExpander"] > details > summary *,
+[data-testid="stExpanderHeader"] * {
+    color: #1A1A1A !important;
+}
+
+/* ── Selectbox valor selecionado ─────────────────────────────────────── */
+[data-baseweb="select"] > div,
+[data-baseweb="select"] > div *,
+[data-baseweb="select"] > div > div > div > div > div,
+[data-baseweb="select"] > div > div > div > div > div > div,
+[data-baseweb="select"] span {
+    color: #1A1A1A !important;
 }
 
 /* ── Misc ─────────────────────────────────────────────────────────────── */
@@ -956,17 +982,24 @@ def _pagina_home():
     st.markdown("""
     <div style="text-align:center; padding: 5rem 0 3rem 0;">
         <h1 style="
-            font-size: 1.9rem;
+            font-size: 2.4rem;
             font-weight: 800;
             color: #1A1A1A;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
+            margin: 0 0 0.2rem 0;
+            text-transform: uppercase;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1;
+        ">Larissa Faesser</h1>
+        <p style="
+            font-size: 1rem;
+            font-weight: 600;
+            color: #C0392B;
+            letter-spacing: 0.22em;
             margin: 0;
             text-transform: uppercase;
             font-family: 'Helvetica Neue', Arial, sans-serif;
-        ">Studio Personal Training</h1>
-        <p style="color:#666666; font-size:0.9rem; margin:0.5rem 0 0 0; letter-spacing:0.03em;">
-            Sistema de Gestão
-        </p>
+        ">Personal</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -984,7 +1017,7 @@ def _pagina_home():
             min-height: 160px;
         ">
             <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
-                Área do Aluno
+                Área Aluno
             </p>
             <p style="color:#666666; font-size:0.85rem; margin:0; line-height:1.65;">
                 Treino, check-in, anamnese, progresso e plano financeiro.
@@ -992,7 +1025,7 @@ def _pagina_home():
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
-        if st.button("Área do Aluno", key="btn_home_aluno", use_container_width=True):
+        if st.button("Área Aluno", key="btn_home_aluno", use_container_width=True):
             st.session_state['area'] = 'aluno_login'
             st.rerun()
 
@@ -1007,7 +1040,7 @@ def _pagina_home():
             min-height: 160px;
         ">
             <p style="color:#1A1A1A; font-weight:700; font-size:1rem; margin:0 0 0.4rem 0;">
-                Área da Professora
+                Área Personal
             </p>
             <p style="color:#666666; font-size:0.85rem; margin:0; line-height:1.65;">
                 Clientes, anamneses, avaliação postural, treinos e financeiro.
@@ -1015,14 +1048,14 @@ def _pagina_home():
         </div>
         """, unsafe_allow_html=True)
         st.markdown("<div style='height:0.6rem'></div>", unsafe_allow_html=True)
-        if st.button("Área da Professora", key="btn_home_prof", use_container_width=True):
+        if st.button("Área Personal", key="btn_home_prof", use_container_width=True):
             st.session_state['area'] = 'professora'
             st.rerun()
 
     # ── Rodapé ────────────────────────────────────────────────────────────────
     st.markdown("""
     <p style="text-align:center; color:#CCCCCC; font-size:0.75rem; margin-top:3rem;">
-        Studio Personal Training — Sistema de Gestão
+        Larissa Faesser Personal
     </p>
     """, unsafe_allow_html=True)
 
@@ -1032,7 +1065,6 @@ def _pagina_home():
 def _pagina_anamnese():
     # Tela de confirmação pós-envio
     if st.session_state.get('anamnese_confirmada'):
-        st.balloons()
         st.success(
             "✅ Anamnese enviada com sucesso!  "
             "Em breve a professora entrará em contato."
@@ -1073,13 +1105,9 @@ def _pagina_anamnese():
             telefone_cl = st.text_input("Telefone / WhatsApp", key="an_tel",
                                         placeholder="(48) 9 0000-0000")
             _dig_tel = ''.join(c for c in telefone_cl if c.isdigit())
-            if telefone_cl.strip() and len(_dig_tel) == 11:
-                st.success("✅ Telefone válido")
         with col_email:
             email_cl = st.text_input("E-mail", key="an_email",
                                      placeholder="exemplo@email.com")
-            if email_cl.strip() and '@' in email_cl and '.' in email_cl.split('@')[-1]:
-                st.success("✅ E-mail válido")
 
         col_ocup, col_cidade = st.columns(2)
         with col_ocup:
@@ -1373,7 +1401,6 @@ def _pagina_anamnese():
 
 def _pagina_upload_postural():
     if st.session_state.get('postural_confirmada'):
-        st.balloons()
         st.success("✅ Fotos enviadas com sucesso! Em breve a professora entrará em contato.")
         st.info("Você pode fechar esta página ou clicar em '← Início' para voltar.")
         return
@@ -1707,7 +1734,7 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
   <tr>
     <td style="background:#1A1A1A;padding:28px 32px;text-align:center;">
       <h1 style="color:#ffffff;margin:0;font-size:22px;letter-spacing:1px;">
-        🏋️ Studio Personal Training
+        🏋️ Larissa Faesser Personal
       </h1>
     </td>
   </tr>
@@ -1745,7 +1772,7 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
       </p>
       <p style="font-size:15px;color:#1A1A1A;margin:0;">
         Com carinho,<br>
-        <strong>Sua professora</strong> — Studio Personal Training
+        <strong>Larissa Faesser</strong> — Personal
       </p>
     </td>
   </tr>
@@ -1753,7 +1780,7 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
     <td style="background:#F5F5F5;padding:18px 32px;text-align:center;
                border-top:1px solid #E8E8E8;">
       <p style="margin:0;font-size:12px;color:#888888;">
-        Studio Personal Training &nbsp;|&nbsp; Este e-mail foi enviado automaticamente.
+        Larissa Faesser Personal &nbsp;|&nbsp; Este e-mail foi enviado automaticamente.
       </p>
     </td>
   </tr>
@@ -1765,7 +1792,7 @@ def _realizar_envio_treino(nome, objetivo_label, periodo, email_dest, pdf_bytes,
         msg = MIMEMultipart('mixed')
         msg['From']    = EMAIL_REMETENTE
         msg['To']      = email_dest
-        msg['Subject'] = "Seu Plano de Treino Personalizado — Studio Personal Training"
+        msg['Subject'] = "Seu Plano de Treino Personalizado — Larissa Faesser Personal"
         msg.attach(MIMEText(corpo_html, 'html', 'utf-8'))
 
         anexo = MIMEApplication(pdf_bytes, _subtype='pdf')
@@ -1807,7 +1834,7 @@ def _form_email_treino(nome, objetivo_label, periodo, pdf_bytes, nome_arquivo):
     nome_primeiro = nome.split()[0] if nome else nome
     with st.container(border=True):
         st.markdown(f"**Para:** {email_dest}")
-        st.markdown("**Assunto:** Seu Plano de Treino Personalizado — Studio Personal Training")
+        st.markdown("**Assunto:** Seu Plano de Treino Personalizado — Larissa Faesser Personal")
         st.markdown(f"**Corpo:** Mensagem personalizada para {nome_primeiro} · Objetivo: {objetivo_label} · {periodo} semanas")
         st.markdown(f"**Anexo:** `{nome_arquivo}`")
 
@@ -3634,7 +3661,7 @@ def _render_calendario_checkins(slug, ano, mes):
 # ── Página: Login do Aluno ────────────────────────────────────────────────────
 
 def _pagina_login_aluno():
-    st.title("Studio Personal Training")
+    st.title("Larissa Faesser Personal")
     st.markdown("### Acesso do Aluno")
     st.divider()
 
@@ -4114,8 +4141,8 @@ def _pagina_aluno():
         st.session_state['area'] = None
         st.rerun()
 
-    st.title("Studio Personal Training")
-    st.markdown('<p class="subtitulo">Área do Aluno</p>', unsafe_allow_html=True)
+    st.title("Larissa Faesser Personal")
+    st.markdown('<p class="subtitulo">Área Aluno</p>', unsafe_allow_html=True)
     st.divider()
 
     tab_an, tab_post, tab_prog = st.tabs([
@@ -4207,8 +4234,8 @@ def _pagina_professora():
     if not st.session_state.get('autenticado'):
         st.markdown("""
         <div style="text-align:center; padding:3rem 0 1.5rem;">
-            <h2 style="color:#1A1A1A; font-weight:800; margin:0;">Studio Personal Training</h2>
-            <p style="color:#666666; margin:0.4rem 0 0 0;">Acesso Restrito — Área da Professora</p>
+            <h2 style="color:#1A1A1A; font-weight:800; margin:0;">Larissa Faesser Personal</h2>
+            <p style="color:#666666; margin:0.4rem 0 0 0;">Acesso Restrito — Área Personal</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -4238,7 +4265,7 @@ def _pagina_professora():
         st.image("assets/logo_escuro.png", use_container_width=True)
         st.markdown("""
         <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
-            <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área da Professora</p>
+            <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Área Personal</p>
         </div>
         """, unsafe_allow_html=True)
 

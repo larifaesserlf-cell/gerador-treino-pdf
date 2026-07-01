@@ -38,7 +38,7 @@ CINZA_TH    = HexColor('#1A1A1A')
 CINZA_FILL  = HexColor('#FAFAFA')
 VERMELHO    = HexColor('#C0392B')
 
-NOME_CONSULTORIA = "Studio Personal Training"
+NOME_CONSULTORIA = "Larissa Faesser Personal"
 
 PAGE_W, PAGE_H = A4
 MARGIN    = 2 * cm
