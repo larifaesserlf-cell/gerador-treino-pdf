@@ -1053,22 +1053,23 @@ def _exibir_anamnese_streamlit(dados):
 def _pagina_home():
     # ── Header ────────────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="text-align:center; padding: 5rem 0 3rem 0;">
+    <div style="text-align:center; padding: 3.5rem 1rem 2.5rem;">
         <h1 style="
-            font-size: 2.4rem;
+            font-size: clamp(1.5rem, 7vw, 2.4rem);
             font-weight: 800;
             color: #1A1A1A;
-            letter-spacing: 0.08em;
-            margin: 0 0 0.2rem 0;
+            letter-spacing: clamp(0.02em, 1vw, 0.08em);
+            margin: 0 0 0.3rem 0;
             text-transform: uppercase;
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1;
+            line-height: 1.15;
+            white-space: nowrap;
         ">Larissa Faesser</h1>
         <p style="
-            font-size: 1rem;
+            font-size: clamp(0.7rem, 3vw, 1rem);
             font-weight: 600;
             color: #C0392B;
-            letter-spacing: 0.22em;
+            letter-spacing: 0.18em;
             margin: 0;
             text-transform: uppercase;
             font-family: 'Helvetica Neue', Arial, sans-serif;
