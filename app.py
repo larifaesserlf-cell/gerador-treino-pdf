@@ -104,16 +104,51 @@ section[data-testid="stSidebar"] * {
     color: #CCCCCC !important;
 }
 
-/* Botão Sair na sidebar */
+/* ── Nav buttons na sidebar ──────────────────────────────────────────── */
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {
-    background-color: transparent !important;
+    background: transparent !important;
+    color: #888888 !important;
+    border: none !important;
+    border-left: 3px solid transparent !important;
+    border-radius: 6px !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    padding: 7px 10px !important;
+    font-size: 0.85rem !important;
+    font-weight: 400 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button *,
+[data-testid="stSidebar"] div[data-testid="stButton"] > button p {
+    color: #888888 !important;
+    text-align: left !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover,
+[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover * {
+    color: #CCCCCC !important;
+    background: transparent !important;
+}
+/* Sub-itens dentro dos expanders de nav */
+[data-testid="stSidebar"] details div[data-testid="stButton"] > button {
+    padding-left: 20px !important;
+    font-size: 0.84rem !important;
+}
+/* Botão Sair (via st-key-btn_sair_aluno gerado pelo Streamlit) */
+[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button {
     color: #555555 !important;
     border: 1px solid #333333 !important;
+    border-left: 1px solid #333333 !important;
     border-radius: 20px !important;
     font-size: 0.82rem !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 7px 12px !important;
 }
-[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
-    background-color: #2A2A2A !important;
+[data-testid="stSidebar"] .st-key-btn_sair_aluno div[data-testid="stButton"] > button:hover {
+    background: #2A2A2A !important;
     color: #AAAAAA !important;
 }
 
@@ -316,6 +351,42 @@ input::placeholder, textarea::placeholder,
 [data-testid="stExpander"] > details > summary *,
 [data-testid="stExpanderHeader"] * {
     color: #1A1A1A !important;
+}
+
+/* ── Expanders como grupos de nav na sidebar ────────────────────────── */
+[data-testid="stSidebar"] [data-testid="stExpander"],
+[data-testid="stSidebar"] [data-testid="stExpander"] > div,
+[data-testid="stSidebar"] [data-testid="stExpander"] details,
+[data-testid="stSidebar"] [data-testid="stExpander"] details > div,
+[data-testid="stSidebar"] [data-testid="stExpander"] details > div > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] details summary {
+    background: transparent !important;
+    color: #999999 !important;
+    font-size: 0.70rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.10em !important;
+    text-transform: uppercase !important;
+    padding: 8px 4px !important;
+    border-radius: 4px !important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] details summary:hover {
+    color: #CCCCCC !important;
+    background: transparent !important;
+}
+[data-testid="stSidebar"] [data-testid="stExpander"] details summary *,
+[data-testid="stSidebar"] [data-testid="stExpander"] details summary svg {
+    color: #999999 !important;
+    fill: #999999 !important;
+}
+/* botões nav dentro dos expanders — garantir texto visível */
+[data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="stButton"] > button,
+[data-testid="stSidebar"] [data-testid="stExpander"] div[data-testid="stButton"] > button p {
+    color: #888888 !important;
+    background: transparent !important;
 }
 
 /* ── Selectbox valor selecionado ─────────────────────────────────────── */
@@ -4083,52 +4154,113 @@ def _tab_aluno_meu_plano(slug):
                 pass
 
 
+def _tab_aluno_perfil(slug):
+    cad = _carregar_json(_cadastro_path(slug), {})
+    st.markdown("## Meu Perfil")
+    foto = cad.get("foto")
+    if foto:
+        try:
+            import base64 as _b64, io as _io
+            from PIL import Image as _Img
+            img = _Img.open(_io.BytesIO(_b64.b64decode(foto)))
+            st.image(img, width=120)
+        except Exception:
+            pass
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"**Nome:** {cad.get('nome', '—')}")
+        st.markdown(f"**Nascimento:** {_fmt_data_br(cad.get('nascimento', ''))}")
+    with col2:
+        st.markdown(f"**WhatsApp:** {cad.get('whatsapp', '—')}")
+        st.markdown(f"**E-mail:** {cad.get('email', '—')}")
+
+
 def _pagina_aluno_logado():
     slug   = st.session_state.get('aluno_logado_slug', '')
     cad    = _carregar_json(_cadastro_path(slug), {})
     nome_c = cad.get('nome', slug)
 
-    # ── Sidebar de navegação ──────────────────────────────────────────────────
+    # ── Nav state ─────────────────────────────────────────────────────────────
+    if 'nav_aluno_page' not in st.session_state:
+        st.session_state['nav_aluno_page'] = 'treino'
+    current = st.session_state['nav_aluno_page']
+
+    in_aval  = current in ('anamnese', 'postural', 'antropometrica')
+    in_tren  = current in ('treino', 'checkin', 'progresso')
+    in_plano = current in ('plano', 'financeiro')
+
+    def _nav(label, page_key):
+        if st.button(label, key=f"nav_{page_key}", use_container_width=True):
+            st.session_state['nav_aluno_page'] = page_key
+            st.rerun()
+
+    # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
         st.image("assets/logo_escuro.png", use_container_width=True)
         st.markdown(f"""
-        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.8rem;">
+        <div style="padding:0.5rem 1rem 1rem; border-bottom:1px solid #2A2A2A; margin-bottom:0.4rem;">
             <p style="color:#444444; font-size:0.75rem; margin:0; letter-spacing:0.02em;">Olá, {nome_c.split()[0]}!</p>
         </div>
+        <style>
+        [data-testid="stSidebar"] .st-key-nav_{current} div[data-testid="stButton"] > button,
+        [data-testid="stSidebar"] .st-key-nav_{current} div[data-testid="stButton"] > button * {{
+            color: #E8896A !important;
+            border-left: none !important;
+            background: transparent !important;
+            font-weight: 600 !important;
+        }}
+        [data-testid="stSidebar"] .st-key-nav_{current} div[data-testid="stButton"] > button {{
+            border-left: 3px solid #C0392B !important;
+            background: rgba(192,57,43,0.12) !important;
+        }}
+        </style>
         """, unsafe_allow_html=True)
 
-        _NAV_ALUNO = [
-            "🏋️  Meu Treino",
-            "📅  Check-in",
-            "📋  Anamnese",
-            "📊  Progresso",
-            "💬  Feedback",
-            "💳  Meu Plano",
-        ]
-        secao_aluno = st.radio("nav", _NAV_ALUNO, key="nav_aluno",
-                               label_visibility="collapsed")
+        _nav("Perfil", "perfil")
 
-        st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+        with st.expander("Avaliações", expanded=in_aval):
+            _nav("Anamnese", "anamnese")
+            _nav("Avaliação Postural", "postural")
+            _nav("Avaliação Antropométrica", "antropometrica")
+
+        with st.expander("Meu Treino", expanded=in_tren):
+            _nav("Treino", "treino")
+            _nav("Check-in", "checkin")
+            _nav("Progresso", "progresso")
+
+        with st.expander("Meu Plano", expanded=in_plano):
+            _nav("Plano", "plano")
+            _nav("Financeiro", "financeiro")
+
+        _nav("Feedback", "feedback")
+
+        st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
         if st.button("Sair", key="btn_sair_aluno", use_container_width=True):
             st.session_state.pop('aluno_logado_slug', None)
             st.session_state['area'] = None
             st.rerun()
 
     # ── Conteúdo principal ────────────────────────────────────────────────────
-    if secao_aluno == "🏋️  Meu Treino":
+    if current == 'treino':
         _tab_aluno_meu_treino(slug)
-    elif secao_aluno == "📅  Check-in":
+    elif current == 'checkin':
         _tab_aluno_checkin(slug)
-    elif secao_aluno == "📋  Anamnese":
+    elif current == 'anamnese':
         _pagina_anamnese()
-    elif secao_aluno == "📊  Progresso":
+    elif current == 'postural':
+        _pagina_upload_postural()
+    elif current in ('progresso', 'antropometrica'):
         if not st.session_state.get('cliente_slug'):
             st.session_state['cliente_slug'] = slug
         _pagina_portal_cliente()
-    elif secao_aluno == "💬  Feedback":
+    elif current == 'feedback':
         _tab_aluno_feedback(slug)
-    elif secao_aluno == "💳  Meu Plano":
+    elif current in ('plano', 'financeiro'):
         _tab_aluno_meu_plano(slug)
+    elif current == 'perfil':
+        _tab_aluno_perfil(slug)
+    else:
+        _tab_aluno_meu_treino(slug)
 
 
 # ── Página: Aluno ────────────────────────────────────────────────────────────
